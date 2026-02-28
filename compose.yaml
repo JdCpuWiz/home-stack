@@ -2,19 +2,12 @@ services:
   homestack:
     build: .
     restart: unless-stopped
+    ports:
+      - "3000:3000"
     environment:
       DATABASE_URL: ${DATABASE_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL}
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.homestack.rule=Host(`${HOMESTACK_HOST}`)"
-      - "traefik.http.routers.homestack.entrypoints=websecure"
-      - "traefik.http.routers.homestack.tls.certresolver=letsencrypt"
-      - "traefik.http.services.homestack.loadbalancer.server.port=3000"
-    networks:
-      - traefik
-
-networks:
-  traefik:
-    external: true
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-UTC}

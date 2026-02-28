@@ -3,13 +3,9 @@
 ## Prerequisites on the remote server
 
 - Docker + Docker Compose v2
-- Traefik running as a reverse proxy with:
-  - An external Docker network named `traefik`
-  - An HTTPS entrypoint named `websecure`
-  - A cert resolver named `letsencrypt`
 - Git
 - Access to the remote Postgres server from the remote host
-- A domain/subdomain pointed at the server (e.g. `homestack.example.com`)
+- A reverse proxy (Traefik, Nginx, Caddy, etc.) fronting port 3000
 
 ---
 
@@ -26,21 +22,27 @@ cd home-stack
 
 ```bash
 cp .env.example .env
-```
-
-Edit `.env`:
-
-```bash
 nano .env
 ```
 
-Fill in all three values:
+Fill in all values:
 
 ```env
+# Postgres connection string (remote server)
 DATABASE_URL="postgresql://user:password@host:5432/homestack?schema=public"
+
+# Random secret for NextAuth JWT signing
 NEXTAUTH_SECRET="<random secret>"
+
+# Public URL the app is served at (used in QR codes on labels)
 NEXTAUTH_URL="https://homestack.example.com"
-HOMESTACK_HOST="homestack.example.com"
+
+# User/group ID for file permissions (match your server user)
+PUID=1000
+PGID=1000
+
+# Timezone
+TZ=America/New_York
 ```
 
 **Generate a secure `NEXTAUTH_SECRET`:**
@@ -48,7 +50,11 @@ HOMESTACK_HOST="homestack.example.com"
 openssl rand -base64 32
 ```
 
-> `HOMESTACK_HOST` is used by the Traefik router rule. It must match your domain exactly.
+**Find your PUID/PGID:**
+```bash
+id
+# uid=1000(youruser) gid=1000(youruser)
+```
 
 ---
 
@@ -59,22 +65,28 @@ docker compose up -d --build
 ```
 
 This will:
-1. Build the Next.js app inside Docker (multi-stage)
-2. Run `prisma db push` on startup to sync the schema
-3. Start the app on port 3000 (behind Traefik)
+1. Build the Next.js app inside Docker (multi-stage, node:20-alpine)
+2. Run `prisma db push` on startup to sync the schema to your Postgres DB
+3. Start the app listening on `0.0.0.0:3000`
 
 **Check logs:**
 ```bash
 docker compose logs -f
 ```
 
-Look for `Ready` to confirm startup. You should see Prisma sync output followed by the Next.js server starting.
+Look for `Ready` to confirm startup. You'll see Prisma sync output first, then the Next.js server.
 
 ---
 
 ## 4. Seed the first admin user
 
-Run this once after the first deployment:
+Run once after the first deployment:
+
+```bash
+docker compose exec homestack sh -c "npx ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"
+```
+
+To customise the credentials:
 
 ```bash
 docker compose exec homestack sh -c "
@@ -85,21 +97,23 @@ docker compose exec homestack sh -c "
 "
 ```
 
-Or use the defaults (username: `admin`, password: `changeme`):
-
-```bash
-docker compose exec homestack sh -c "npx ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"
-```
-
 **Change the password immediately** after first login via Settings → Users.
 
 ---
 
-## 5. Verify
+## 5. Point your reverse proxy at port 3000
 
-- Open `https://homestack.example.com` in a browser
+The app listens on port 3000. Configure your reverse proxy to forward traffic to it.
+
+**NEXTAUTH_URL must match the public URL** your proxy serves the app on — this is also used to build the QR code URLs printed on labels.
+
+---
+
+## 6. Verify
+
+- Open your configured URL in a browser
 - You should be redirected to `/login`
-- Sign in with `admin` / `changeme`
+- Sign in with your seeded credentials
 - Change the password via the **Users** link in the header
 
 ---
@@ -115,28 +129,6 @@ Schema changes are applied automatically on startup via `prisma db push`.
 
 ---
 
-## Traefik not running / no Traefik setup
-
-If you want to test without Traefik, expose the port directly instead.
-Replace the `labels` and `networks` section in `compose.yaml` temporarily:
-
-```yaml
-services:
-  homestack:
-    build: .
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      NEXTAUTH_URL: ${NEXTAUTH_URL}
-```
-
-Then access via `http://<server-ip>:3000`.
-
----
-
 ## Troubleshooting
 
 **Container exits immediately**
@@ -146,14 +138,13 @@ docker compose logs homestack
 Usually a missing or malformed `DATABASE_URL` or `NEXTAUTH_SECRET`.
 
 **Prisma db push fails**
-- Confirm the DB server is reachable from the Docker host
+- Confirm the DB host is reachable from the Docker host: `docker compose exec homestack ping <db-host>`
 - Check `DATABASE_URL` credentials and database name
-- The DB user needs SELECT, INSERT, UPDATE, DELETE, CREATE TABLE privileges (but NOT create database)
+- The DB user needs SELECT, INSERT, UPDATE, DELETE, CREATE TABLE privileges — but NOT create database
 
-**Traefik not routing**
-- Confirm the `traefik` external network exists: `docker network ls | grep traefik`
-- Confirm `HOMESTACK_HOST` in `.env` matches your DNS record exactly
-- Check Traefik dashboard for the `homestack` router
+**App loads but login redirects incorrectly**
+- Check `NEXTAUTH_URL` is set to the exact public URL (with `https://`)
+- Ensure your reverse proxy passes the `Host` header through
 
-**QR codes point to wrong URL**
-- `NEXTAUTH_URL` must be set to the public HTTPS URL — this is used to build the QR code link on labels
+**QR codes point to the wrong URL**
+- `NEXTAUTH_URL` is used to build the QR code link on labels — must be the correct public HTTPS URL
