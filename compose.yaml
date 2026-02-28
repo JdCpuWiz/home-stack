@@ -11,3 +11,5 @@ services:
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
       TZ: ${TZ:-UTC}
+    volumes:
+      - ./uploads:/app/public/uploads

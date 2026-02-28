@@ -11,7 +11,10 @@ export default async function ToteDetailPage({ params }: Props) {
 
   const tote = await prisma.tote.findUnique({
     where: { id: toteId },
-    include: { items: { orderBy: { position: "asc" } } },
+    include: {
+      items: { orderBy: { position: "asc" } },
+      photos: { orderBy: { createdAt: "asc" } },
+    },
   });
 
   if (!tote) notFound();
@@ -55,6 +58,21 @@ export default async function ToteDetailPage({ params }: Props) {
           </ul>
         )}
       </div>
+
+      {tote.photos.length > 0 && (
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {tote.photos.map((photo) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={photo.id}
+              src={`/uploads/totes/${tote.id}/${photo.filename}`}
+              alt=""
+              className="w-full aspect-square object-cover rounded"
+              style={{ border: "1px solid var(--bg-200)" }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

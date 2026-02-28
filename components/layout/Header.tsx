@@ -35,6 +35,13 @@ export default function Header() {
           {session ? (
             <>
               <Link
+                href="/"
+                className="text-sm"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                All Totes
+              </Link>
+              <Link
                 href="/totes/new"
                 className="text-sm"
                 style={{ color: "var(--text-secondary)" }}

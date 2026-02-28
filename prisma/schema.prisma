@@ -25,11 +25,12 @@ model User {
 }
 
 model Tote {
-  id        Int        @id @default(autoincrement())
+  id        Int          @id @default(autoincrement())
   title     String
   items     ToteItem[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  photos    TotePhoto[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 }
 
 model ToteItem {
@@ -38,4 +39,12 @@ model ToteItem {
   tote        Tote   @relation(fields: [toteId], references: [id], onDelete: Cascade)
   description String @db.VarChar(100)
   position    Int
+}
+
+model TotePhoto {
+  id        Int      @id @default(autoincrement())
+  toteId    Int
+  tote      Tote     @relation(fields: [toteId], references: [id], onDelete: Cascade)
+  filename  String
+  createdAt DateTime @default(now())
 }
