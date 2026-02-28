@@ -190,6 +190,12 @@ docker compose up -d --build
 # Migrations run automatically on startup via postinstall or entrypoint
 ```
 
+## Session Management
+
+At the end of every work session, run `/savesession` to update memory, commit all changes, and push to GitHub.
+
+**GitHub repo**: https://github.com/JdCpuWiz/home-stack
+
 ## Future Suite Context
 
 HomeStack is designed to be the first module in a self-hosted home management platform. When adding future modules (e.g. pantry tracking, home inventory), reuse:
