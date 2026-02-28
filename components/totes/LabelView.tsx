@@ -24,31 +24,21 @@ export default function LabelView({ toteId, title, items, url }: Props) {
         </a>
       </div>
 
-      {/* Label — visible on screen + printed */}
-      <div className="label-page">
-        <div className="label-inner">
-          <div className="label-qr">
-            <QRCodeSVG value={url} size={90} bgColor="#ffffff" fgColor="#000000" />
-          </div>
-          <div className="label-content">
-            <div className="label-id">#{toteId}</div>
-            <div className="label-title">{title}</div>
-            {items.length > 0 && (
-              <ul className="label-items">
-                {items.map((item) => (
-                  <li key={item.id}>{item.description}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
+      {/* Screen preview wrapper */}
+      <div className="no-print label-screen-wrap">
+        <LabelContent toteId={toteId} title={title} items={items} url={url} />
+      </div>
+
+      {/* Print-only label */}
+      <div className="print-only">
+        <LabelContent toteId={toteId} title={title} items={items} url={url} />
       </div>
 
       <style>{`
-        /* Jadens JD-668BT — 4" wide continuous tape */
+        /* 4×6 shipping label */
         @media print {
           @page {
-            size: 4in auto;
+            size: 4in 6in;
             margin: 0;
           }
           body {
@@ -57,52 +47,87 @@ export default function LabelView({ toteId, title, items, url }: Props) {
             color: #000 !important;
           }
           .no-print { display: none !important; }
+          .print-only { display: block !important; }
+        }
+
+        .print-only { display: none; }
+
+        .label-screen-wrap {
+          display: flex;
+          justify-content: center;
+          padding: 24px;
+          background: #555;
+          min-height: calc(100vh - 60px);
         }
 
         .label-page {
           background: #fff;
           color: #000;
           font-family: Arial, Helvetica, sans-serif;
-          padding: 6mm;
           width: 4in;
+          height: 6in;
+          padding: 8mm;
           box-sizing: border-box;
-        }
-
-        .label-inner {
           display: flex;
-          gap: 6mm;
-          align-items: flex-start;
+          flex-direction: column;
+          box-shadow: 0 4px 24px rgba(0,0,0,0.4);
         }
 
-        .label-qr {
-          flex-shrink: 0;
-        }
-
-        .label-content {
-          flex: 1;
-          min-width: 0;
+        .label-header {
+          text-align: center;
+          margin-bottom: 4mm;
         }
 
         .label-id {
-          font-size: 9pt;
-          color: #666;
+          font-size: 10pt;
+          color: #888;
           margin-bottom: 1mm;
         }
 
         .label-title {
-          font-size: 14pt;
+          font-size: 22pt;
           font-weight: bold;
           line-height: 1.2;
-          margin-bottom: 2mm;
           word-break: break-word;
+        }
+
+        .label-qr-wrap {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          flex-shrink: 0;
+          margin: 3mm 0;
+        }
+
+        .label-qr-wrap svg {
+          width: 68mm;
+          height: 68mm;
+        }
+
+        .label-scan-hint {
+          font-size: 7pt;
+          color: #aaa;
+          margin-top: 2mm;
+          text-transform: uppercase;
+          letter-spacing: 0.5pt;
+        }
+
+        .label-divider {
+          border: none;
+          border-top: 1px solid #ddd;
+          margin: 3mm 0;
         }
 
         .label-items {
           list-style: none;
           padding: 0;
           margin: 0;
-          font-size: 8pt;
-          line-height: 1.4;
+          font-size: 9pt;
+          line-height: 1.5;
+          columns: 2;
+          column-gap: 4mm;
+          flex: 1;
+          overflow: hidden;
         }
 
         .label-items li::before {
@@ -110,5 +135,32 @@ export default function LabelView({ toteId, title, items, url }: Props) {
         }
       `}</style>
     </>
+  );
+}
+
+function LabelContent({ toteId, title, items, url }: Props) {
+  return (
+    <div className="label-page">
+      <div className="label-header">
+        <div className="label-id">#{toteId}</div>
+        <div className="label-title">{title}</div>
+      </div>
+
+      <div className="label-qr-wrap">
+        <QRCodeSVG value={url} size={250} bgColor="#ffffff" fgColor="#000000" />
+        <div className="label-scan-hint">scan to view full contents</div>
+      </div>
+
+      {items.length > 0 && (
+        <>
+          <hr className="label-divider" />
+          <ul className="label-items">
+            {items.map((item) => (
+              <li key={item.id}>{item.description}</li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
   );
 }
