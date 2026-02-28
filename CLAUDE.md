@@ -84,11 +84,12 @@ model User {
 enum Role { ADMIN USER }
 
 model Tote {
-  id        Int        @id @default(autoincrement())
+  id        Int          @id @default(autoincrement())
   title     String
   items     ToteItem[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  photos    TotePhoto[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 }
 
 model ToteItem {
@@ -98,60 +99,82 @@ model ToteItem {
   description String @db.VarChar(100)   // 100 chars — revisit as needed
   position    Int
 }
+
+model TotePhoto {
+  id        Int      @id @default(autoincrement())
+  toteId    Int
+  tote      Tote     @relation(fields: [toteId], references: [id], onDelete: Cascade)
+  filename  String
+  createdAt DateTime @default(now())
+}
 ```
 
 ## Key Features
 
-**Tote detail URL**: `/totes/[id]` — publicly accessible (QR code target). Shows all items and a Print Label button.
+**Tote detail URL**: `/totes/[id]` — publicly accessible (QR code target). Shows all items, photo grid, and a Print Label button.
 
-**Edit**: `/totes/[id]/edit` — protected. Edit tote title and items.
+**Edit**: `/totes/[id]/edit` — protected. Edit tote title and items. Photo upload/delete section below the form (saves immediately on selection).
+
+**Photos**: stored on disk at `public/uploads/totes/[id]/[uuid].[ext]`, served at `/uploads/...`. Web-only — not printed. Volume-mounted in Docker so photos survive rebuilds (`./uploads:/app/public/uploads`).
 
 **Search**: `/search?q=` — public, spans tote titles and item descriptions.
 
-**Label print view**: `/totes/[id]/label` — minimal page (no nav) styled for `@media print` to match Jadens JD-668BT label dimensions (4" wide). QR code generated client-side with `qrcode.react`.
+**Label print view**: `/totes/[id]/label` — minimal page (no nav), 4×6 shipping label format. Vertical layout: title → large QR code (68mm) → 2-column item list. QR code generated client-side with `qrcode.react`. Photos are NOT included.
 
 ## API Routes
 
 ```
-GET  /api/totes              # list all totes (protected)
-POST /api/totes              # create tote (protected)
-GET  /api/totes/[id]         # tote detail + items (public)
-PUT  /api/totes/[id]         # update tote + items (protected)
-DEL  /api/totes/[id]         # delete tote (protected)
-GET  /api/search?q=          # full-text search across totes + items (public)
+GET  /api/totes                        # list all totes (protected)
+POST /api/totes                        # create tote (protected)
+GET  /api/totes/[id]                   # tote detail + items (public)
+PUT  /api/totes/[id]                   # update tote + items (protected)
+DEL  /api/totes/[id]                   # delete tote (protected)
+POST /api/totes/[id]/photos            # upload photo (protected, multipart)
+DEL  /api/totes/[id]/photos/[photoId]  # delete photo + file (protected)
+GET  /api/search?q=                    # full-text search across totes + items (public)
 ```
 
-## Project Structure (planned)
+## Project Structure
 
 ```
 app/
-  page.tsx                   # Home — tote list (protected)
-  login/page.tsx             # Login page
-  search/page.tsx            # Public search
+  page.tsx                          # Home — tote list (protected)
+  login/page.tsx + LoginForm.tsx    # Login (Suspense boundary for useSearchParams)
+  search/page.tsx                   # Public search
   totes/
-    new/page.tsx             # Create tote (protected)
+    new/page.tsx                    # Create tote (protected)
     [id]/
-      page.tsx               # Tote detail (public)
-      edit/page.tsx          # Edit tote (protected)
-      label/page.tsx         # Print-only label view (public)
+      page.tsx                      # Tote detail + photo grid (public)
+      edit/page.tsx                 # Edit title/items + photo manager (protected)
+      label/page.tsx                # 4x6 print label (public)
+      label/layout.tsx              # No nav wrapper
   settings/
-    users/page.tsx           # Admin: user management
+    users/page.tsx + UsersClient.tsx  # Admin: user management
   api/
     auth/[...nextauth]/route.ts
     totes/route.ts
     totes/[id]/route.ts
+    totes/[id]/photos/route.ts        # POST upload
+    totes/[id]/photos/[photoId]/route.ts  # DELETE
+    users/route.ts
+    users/[id]/route.ts
     search/route.ts
 components/
-  ui/                        # shadcn/ui base components
-  layout/                    # Header, Footer, Nav
-  totes/                     # ToteCard, ToteItemList, SearchBar, QRCode, LabelPreview
-  auth/                      # LoginForm, ProtectedRoute wrapper
+  ui/                               # shadcn/ui base components
+  layout/Header.tsx                 # Nav: Search | All Totes | New Tote | Users | Sign out
+  layout/SessionWrapper.tsx
+  totes/
+    ToteCard.tsx
+    ToteForm.tsx                    # Create/edit title + items
+    TotePhotoManager.tsx            # Upload/delete photos (client component)
+    LabelView.tsx                   # 4x6 label with QR code
 lib/
-  prisma.ts                  # Prisma client singleton
-  auth.ts                    # NextAuth config
+  prisma.ts                         # Prisma client singleton
+  auth.ts                           # NextAuth config
 prisma/
-  schema.prisma
-  migrations/
+  schema.prisma                     # User, Tote, ToteItem, TotePhoto, Role enum
+  seed.ts
+uploads/                            # Host-side photo storage (volume-mounted into container)
 ```
 
 ## Deployment
@@ -180,14 +203,16 @@ Traefik handles TLS termination and routing externally.
 |---|---|
 | `DATABASE_URL` | Postgres connection string (remote server) |
 | `NEXTAUTH_SECRET` | Required — random secret for NextAuth JWT signing |
-| `NEXTAUTH_URL` | Public URL of the app (e.g. `https://homestack.local`) |
+| `NEXTAUTH_URL` | Public URL of the app (e.g. `https://homestack.deckerzoo.com`) |
+| `PORT` | Host port to bind (default 3000). Container always listens on 3000 internally. |
 
 ### Deploy updates
 
 ```bash
 git pull origin main
 docker compose up -d --build
-# Migrations run automatically on startup via postinstall or entrypoint
+# Schema changes (prisma db push) run automatically on container startup
+# Photos persist via ./uploads volume mount
 ```
 
 ## Session Management
