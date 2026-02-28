@@ -1,0 +1,181 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-poppins);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* HomeStack dark theme — always dark, dark class forced on <html> */
+:root {
+  --radius: 0.5rem;
+
+  /* Backgrounds */
+  --bg-base:    #0a0a0a;
+  --bg-100:     #1a1a1a;
+  --bg-200:     #2d2d2d;
+  --bg-300:     #3a3a3a;
+  --bg-400:     #4a4a4a;
+
+  /* Text */
+  --text-primary:   #e5e5e5;
+  --text-secondary: #d1d5db;
+
+  /* Accent */
+  --accent-orange:       #ff9900;
+  --accent-orange-hover: #e68a00;
+
+  /* Shadows */
+  --shadow-subtle:   0 1px 2px rgba(0,0,0,0.3), 0 -1px 1px rgba(255,255,255,0.05);
+  --shadow-standard: 0 4px 6px rgba(0,0,0,0.4), 0 -2px 3px rgba(255,255,255,0.08);
+  --shadow-prominent: 0 10px 20px rgba(0,0,0,0.5), 0 -3px 6px rgba(255,255,255,0.1);
+
+  /* shadcn/ui dark vars */
+  --background: #0a0a0a;
+  --foreground: #e5e5e5;
+  --card: #1a1a1a;
+  --card-foreground: #e5e5e5;
+  --popover: #1a1a1a;
+  --popover-foreground: #e5e5e5;
+  --primary: #ff9900;
+  --primary-foreground: #0a0a0a;
+  --secondary: #2d2d2d;
+  --secondary-foreground: #e5e5e5;
+  --muted: #2d2d2d;
+  --muted-foreground: #9ca3af;
+  --accent: #2d2d2d;
+  --accent-foreground: #e5e5e5;
+  --destructive: #ef4444;
+  --destructive-foreground: #e5e5e5;
+  --border: #2d2d2d;
+  --input: #2d2d2d;
+  --ring: #ff9900;
+  --sidebar: #1a1a1a;
+  --sidebar-foreground: #e5e5e5;
+  --sidebar-primary: #ff9900;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: #2d2d2d;
+  --sidebar-accent-foreground: #e5e5e5;
+  --sidebar-border: #2d2d2d;
+  --sidebar-ring: #ff9900;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-poppins), system-ui, sans-serif;
+  }
+}
+
+/* ─── HomeStack utility classes ─────────────────────────────────────── */
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50;
+    background-color: var(--accent-orange);
+    color: #0a0a0a;
+    box-shadow: var(--shadow-subtle);
+  }
+  .btn-primary:hover {
+    background-color: var(--accent-orange-hover);
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50;
+    background-color: var(--bg-200);
+    color: var(--text-primary);
+    border: 1px solid var(--bg-300);
+    box-shadow: var(--shadow-subtle);
+  }
+  .btn-secondary:hover {
+    background-color: var(--bg-300);
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50;
+    background-color: #7f1d1d;
+    color: #fca5a5;
+    border: 1px solid #991b1b;
+    box-shadow: var(--shadow-subtle);
+  }
+  .btn-danger:hover {
+    background-color: #991b1b;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1 text-xs;
+  }
+
+  .input {
+    @apply flex h-10 w-full rounded-md px-3 py-2 text-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
+    background-color: var(--bg-100);
+    color: var(--text-primary);
+    border: 1px solid var(--bg-300);
+  }
+
+  .card {
+    @apply rounded-lg p-4;
+    background-color: var(--bg-100);
+    border: 1px solid var(--bg-200);
+    box-shadow: var(--shadow-standard);
+  }
+
+  .card-surface {
+    @apply rounded-lg p-4;
+    background-color: var(--bg-200);
+    border: 1px solid var(--bg-300);
+    box-shadow: var(--shadow-subtle);
+  }
+
+  .wiz-table {
+    @apply w-full text-sm;
+    border-collapse: collapse;
+  }
+  .wiz-table th {
+    @apply px-3 py-2 text-left font-medium;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--bg-300);
+  }
+  .wiz-table td {
+    @apply px-3 py-2;
+    border-bottom: 1px solid var(--bg-200);
+  }
+  .wiz-table tr:last-child td {
+    border-bottom: none;
+  }
+}
