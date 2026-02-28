@@ -28,7 +28,6 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 
 USER nextjs
 
@@ -36,5 +35,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Sync schema then start (use local prisma@5, not npx which pulls latest)
-CMD ["sh", "-c", "./node_modules/.bin/prisma db push && node server.js"]
+# Sync schema then start (call prisma build entry directly to preserve __dirname)
+CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push && node server.js"]
