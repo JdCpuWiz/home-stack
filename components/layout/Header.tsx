@@ -41,6 +41,15 @@ export default function Header() {
               >
                 New Tote
               </Link>
+              {(session.user as { role?: string }).role === "ADMIN" && (
+                <Link
+                  href="/settings/users"
+                  className="text-sm"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  Users
+                </Link>
+              )}
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}
                 className="btn-secondary btn-sm"
