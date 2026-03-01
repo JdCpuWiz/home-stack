@@ -1,6 +1,7 @@
 "use client";
 
 import { QRCodeSVG } from "qrcode.react";
+import { useRef, forwardRef } from "react";
 
 type Item = { id: number; description: string };
 
@@ -12,12 +13,31 @@ type Props = {
 };
 
 export default function LabelView({ toteId, title, items, url }: Props) {
+  const labelRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadPdf = async () => {
+    if (!labelRef.current) return;
+    const html2canvas = (await import("html2canvas")).default;
+    const { jsPDF } = await import("jspdf");
+    const canvas = await html2canvas(labelRef.current, {
+      scale: 3,
+      backgroundColor: "#ffffff",
+      useCORS: true,
+    });
+    const pdf = new jsPDF({ orientation: "portrait", unit: "in", format: [4, 6] });
+    pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 4, 6);
+    pdf.save(`tote-${toteId}-label.pdf`);
+  };
+
   return (
     <>
       {/* Screen: print button */}
       <div className="no-print p-4 flex gap-3 items-center" style={{ backgroundColor: "var(--bg-100)" }}>
         <button onClick={() => window.print()} className="btn-primary btn-sm">
           Print Label
+        </button>
+        <button onClick={handleDownloadPdf} className="btn-secondary btn-sm">
+          Download PDF
         </button>
         <a href={`/totes/${toteId}`} className="btn-secondary btn-sm">
           ← Back
@@ -26,7 +46,7 @@ export default function LabelView({ toteId, title, items, url }: Props) {
 
       {/* Screen preview wrapper */}
       <div className="no-print label-screen-wrap">
-        <LabelContent toteId={toteId} title={title} items={items} url={url} />
+        <LabelContent ref={labelRef} toteId={toteId} title={title} items={items} url={url} />
       </div>
 
       {/* Print-only label */}
@@ -137,9 +157,12 @@ export default function LabelView({ toteId, title, items, url }: Props) {
   );
 }
 
-function LabelContent({ toteId, title, items, url }: Props) {
+const LabelContent = forwardRef<HTMLDivElement, Props>(function LabelContent(
+  { toteId, title, items, url },
+  ref
+) {
   return (
-    <div className="label-page">
+    <div className="label-page" ref={ref}>
       <div className="label-header">
         <div className="label-id">#{toteId}</div>
       </div>
@@ -160,4 +183,4 @@ function LabelContent({ toteId, title, items, url }: Props) {
       )}
     </div>
   );
-}
+});
