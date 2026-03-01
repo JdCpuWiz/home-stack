@@ -10,7 +10,10 @@ adduser -D -u "$PUID" -G appgroup appuser 2>/dev/null || true
 
 # Ensure the uploads directory exists and is owned by the app user
 mkdir -p /app/public/uploads
-chown -R "$PUID:$PGID" /app/public/uploads
+chown -R "$PUID:$PGID" /app/public/uploads \
+  /app/node_modules/.prisma \
+  /app/node_modules/@prisma \
+  /app/node_modules/prisma
 
 # Run prisma db push then start the server as the app user
 exec su-exec "$PUID:$PGID" sh -c \
