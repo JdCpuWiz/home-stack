@@ -79,9 +79,9 @@ export default function LabelView({ toteId, title, items, url }: Props) {
         }
 
         .label-id {
-          font-size: 10pt;
-          color: #888;
-          margin-bottom: 1mm;
+          font-size: 22pt;
+          font-weight: bold;
+          line-height: 1.2;
         }
 
         .label-title {
@@ -89,6 +89,8 @@ export default function LabelView({ toteId, title, items, url }: Props) {
           font-weight: bold;
           line-height: 1.2;
           word-break: break-word;
+          text-align: center;
+          margin: 2mm 0;
         }
 
         .label-qr-wrap {
@@ -112,15 +114,9 @@ export default function LabelView({ toteId, title, items, url }: Props) {
           letter-spacing: 0.5pt;
         }
 
-        .label-divider {
-          border: none;
-          border-top: 1px solid #ddd;
-          margin: 3mm 0;
-        }
-
         .label-items {
           list-style: none;
-          padding: 0;
+          padding: 3mm;
           margin: 0;
           font-size: 9pt;
           line-height: 1.5;
@@ -128,6 +124,9 @@ export default function LabelView({ toteId, title, items, url }: Props) {
           column-gap: 4mm;
           flex: 1;
           overflow: hidden;
+          border: 1.5px solid #000;
+          border-radius: 2mm;
+          box-sizing: border-box;
         }
 
         .label-items li::before {
@@ -143,7 +142,6 @@ function LabelContent({ toteId, title, items, url }: Props) {
     <div className="label-page">
       <div className="label-header">
         <div className="label-id">#{toteId}</div>
-        <div className="label-title">{title}</div>
       </div>
 
       <div className="label-qr-wrap">
@@ -151,15 +149,14 @@ function LabelContent({ toteId, title, items, url }: Props) {
         <div className="label-scan-hint">scan to view full contents</div>
       </div>
 
+      <div className="label-title">{title}</div>
+
       {items.length > 0 && (
-        <>
-          <hr className="label-divider" />
-          <ul className="label-items">
-            {items.map((item) => (
-              <li key={item.id}>{item.description}</li>
-            ))}
-          </ul>
-        </>
+        <ul className="label-items">
+          {items.map((item) => (
+            <li key={item.id}>{item.description}</li>
+          ))}
+        </ul>
       )}
     </div>
   );
