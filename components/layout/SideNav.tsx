@@ -187,10 +187,10 @@ export default function SideNav({ open, onClose }: Props) {
 
         {/* Version */}
         <div
-          className="px-4 py-3 text-xs shrink-0"
-          style={{ color: "var(--text-secondary)" }}
+          className="px-4 py-3 text-xs font-medium shrink-0"
+          style={{ color: "var(--accent-orange)" }}
         >
-          v0.1.0
+          v{process.env.NEXT_PUBLIC_APP_VERSION}
         </div>
       </aside>
     </>

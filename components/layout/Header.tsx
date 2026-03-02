@@ -41,10 +41,10 @@ export default function Header({ onMenuClick }: Props) {
         {/* Right: version, search, sign-out / sign-in */}
         <div className="flex items-center gap-3">
           <span
-            className="hidden md:block text-xs"
-            style={{ color: "var(--text-secondary)" }}
+            className="hidden md:block text-xs font-medium"
+            style={{ color: "var(--accent-orange)" }}
           >
-            v0.1.0
+            v{process.env.NEXT_PUBLIC_APP_VERSION}
           </span>
           <Link
             href="/search"
@@ -56,7 +56,7 @@ export default function Header({ onMenuClick }: Props) {
           {session ? (
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="btn-secondary btn-sm"
+              className="btn-primary btn-sm"
             >
               Sign out
             </button>
