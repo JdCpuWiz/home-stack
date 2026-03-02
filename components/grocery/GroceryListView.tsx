@@ -87,7 +87,7 @@ export default function GroceryListView({ list, store, areas, suggestions }: Pro
   return (
     <>
       <style>{`
-        .list-item:hover { background-color: var(--bg-400); }
+        .grocery-row:hover { background-color: var(--bg-400); }
       `}</style>
 
       <div className="flex items-center justify-between mb-6">
@@ -116,7 +116,7 @@ export default function GroceryListView({ list, store, areas, suggestions }: Pro
               {groups.get(key)!.map((item, idx) => (
                 <div
                   key={item.id}
-                  className="list-item flex items-center gap-3 px-3 py-3 cursor-pointer"
+                  className="grocery-row flex items-center gap-3 px-3 py-3 cursor-pointer"
                   style={{
                     backgroundColor: idx % 2 === 0 ? "var(--bg-200)" : "var(--bg-300)",
                     borderRadius: "4px",

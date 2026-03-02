@@ -131,17 +131,6 @@ export default function SideNav({ open, onClose }: Props) {
 
   return (
     <>
-      <style>{`
-        .nav-link:hover {
-          background-color: var(--bg-300);
-          color: var(--text-primary) !important;
-        }
-        .section-nav-link:hover {
-          background-color: var(--bg-300);
-          color: var(--accent-orange) !important;
-        }
-      `}</style>
-
       <aside
         className={[
           "fixed inset-y-0 left-0 z-40 flex flex-col w-60 shrink-0",

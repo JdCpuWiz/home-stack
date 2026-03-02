@@ -178,4 +178,13 @@
   .wiz-table tr:last-child td {
     border-bottom: none;
   }
+
+  .nav-link:hover {
+    background-color: var(--bg-300) !important;
+    color: var(--text-primary) !important;
+  }
+  .section-nav-link:hover {
+    background-color: var(--bg-300) !important;
+    color: var(--accent-orange) !important;
+  }
 }
