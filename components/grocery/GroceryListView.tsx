@@ -108,7 +108,7 @@ export default function GroceryListView({ list, store, areas, suggestions }: Pro
           {sortedKeys.map((key) => (
             <div key={key}>
               <div
-                className="text-xs font-semibold uppercase tracking-widest pb-1 mb-1"
+                className="text-sm font-semibold uppercase tracking-wider pb-1 mb-1"
                 style={{ color: "var(--accent-orange)", borderBottom: "1px solid var(--bg-300)" }}
               >
                 {key === "__none__" ? "No Area" : key}
@@ -123,12 +123,10 @@ export default function GroceryListView({ list, store, areas, suggestions }: Pro
                   }}
                   onClick={() => handleCheck(item)}
                 >
-                  <input
-                    type="checkbox"
-                    className="w-5 h-5 shrink-0 cursor-pointer"
-                    style={{ accentColor: "var(--accent-orange)" }}
-                    checked={false}
-                    readOnly
+                  {/* Custom circle checkbox — avoids browser-default white dot */}
+                  <div
+                    className="w-5 h-5 shrink-0 rounded-full border-2 flex items-center justify-center"
+                    style={{ borderColor: "var(--bg-400)", backgroundColor: "transparent" }}
                   />
                   <div className="flex-1 min-w-0">
                     <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>

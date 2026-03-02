@@ -133,12 +133,12 @@ export default function SideNav({ open, onClose }: Props) {
     <>
       <style>{`
         .nav-link:hover {
-          background-color: var(--bg-200);
-          color: var(--text-primary);
+          background-color: var(--bg-300);
+          color: var(--text-primary) !important;
         }
         .section-nav-link:hover {
-          background-color: var(--bg-200);
-          color: var(--accent-orange);
+          background-color: var(--bg-300);
+          color: var(--accent-orange) !important;
         }
       `}</style>
 
