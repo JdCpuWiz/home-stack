@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { GroceryTrip } from "./groceryUtils";
 
 type Props = {
@@ -8,13 +9,34 @@ type Props = {
 };
 
 export default function TripHistoryList({ initialTrips }: Props) {
+  const router = useRouter();
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [adding, setAdding] = useState<Set<number>>(new Set());
+  const [added, setAdded] = useState<Set<number>>(new Set());
 
   function toggle(id: number) {
     setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleReadd(tripId: number, itemId: number) {
+    setAdding((prev) => new Set(prev).add(itemId));
+    const res = await fetch(`/api/grocery/trips/${tripId}/items/${itemId}/readd`, {
+      method: "POST",
+    });
+    if (res.ok) {
+      const { storeId } = await res.json();
+      setAdded((prev) => new Set(prev).add(itemId));
+      // Brief confirmation flash then navigate to the store list
+      setTimeout(() => router.push(`/grocery/${storeId}`), 600);
+    }
+    setAdding((prev) => {
+      const next = new Set(prev);
+      next.delete(itemId);
       return next;
     });
   }
@@ -57,7 +79,6 @@ export default function TripHistoryList({ initialTrips }: Props) {
               </div>
               <div className="flex flex-col gap-2">
                 {trips.map((trip) => {
-                  const purchasedCount = trip.items.filter((i) => i.purchased).length;
                   const total = trip.items.length;
                   const isOpen = expanded.has(trip.id);
 
@@ -87,7 +108,7 @@ export default function TripHistoryList({ initialTrips }: Props) {
                               border: "1px solid var(--bg-400)",
                             }}
                           >
-                            {purchasedCount}/{total} purchased
+                            {total} item{total !== 1 ? "s" : ""}
                           </span>
                           <span style={{ color: "var(--text-secondary)" }}>{isOpen ? "▲" : "▼"}</span>
                         </div>
@@ -101,33 +122,33 @@ export default function TripHistoryList({ initialTrips }: Props) {
                               className="flex items-center gap-2 px-2 py-1.5 rounded text-sm"
                               style={{ backgroundColor: "var(--bg-200)" }}
                             >
-                              <span style={{ color: item.purchased ? "var(--accent-orange)" : "var(--text-secondary)" }}>
-                                {item.purchased ? "✓" : "○"}
-                              </span>
-                              <span
-                                style={{
-                                  color: "var(--text-primary)",
-                                  textDecoration: item.purchased ? "none" : "none",
-                                }}
+                              <div className="flex-1 min-w-0">
+                                <span style={{ color: "var(--text-primary)" }}>{item.name}</span>
+                                {item.quantity && (
+                                  <span className="text-xs ml-2" style={{ color: "var(--text-secondary)" }}>
+                                    {item.quantity}
+                                  </span>
+                                )}
+                                {item.areaName && (
+                                  <span
+                                    className="text-xs ml-2 px-1.5 py-0.5 rounded"
+                                    style={{
+                                      backgroundColor: "var(--bg-300)",
+                                      color: "var(--text-secondary)",
+                                    }}
+                                  >
+                                    {item.areaName}
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                className="btn-secondary btn-sm shrink-0"
+                                disabled={adding.has(item.id) || added.has(item.id)}
+                                onClick={() => handleReadd(trip.id, item.id)}
+                                style={added.has(item.id) ? { color: "var(--accent-orange)" } : {}}
                               >
-                                {item.name}
-                              </span>
-                              {item.quantity && (
-                                <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
-                                  {item.quantity}
-                                </span>
-                              )}
-                              {item.areaName && (
-                                <span
-                                  className="text-xs ml-auto px-1.5 py-0.5 rounded"
-                                  style={{
-                                    backgroundColor: "var(--bg-300)",
-                                    color: "var(--text-secondary)",
-                                  }}
-                                >
-                                  {item.areaName}
-                                </span>
-                              )}
+                                {added.has(item.id) ? "Added ✓" : adding.has(item.id) ? "…" : "Add"}
+                              </button>
                             </div>
                           ))}
                         </div>
