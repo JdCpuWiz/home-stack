@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Header from "./Header";
 import SideNav from "./SideNav";
+import { GroceryActionsProvider } from "@/components/grocery/GroceryActionsContext";
 
 type Props = {
   children: React.ReactNode;
@@ -12,6 +13,7 @@ export default function Shell({ children }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
+    <GroceryActionsProvider>
     <div className="flex flex-col min-h-screen">
       <Header onMenuClick={() => setSidebarOpen((o) => !o)} />
       <div className="flex flex-1 overflow-hidden">
@@ -32,5 +34,6 @@ export default function Shell({ children }: Props) {
         </main>
       </div>
     </div>
+    </GroceryActionsProvider>
   );
 }

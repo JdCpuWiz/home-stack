@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { GroceryStore, GroceryArea, GroceryList, GroceryListItem } from "./groceryUtils";
+import { useGroceryActions } from "./GroceryActionsContext";
 import AddItemDialog from "./AddItemDialog";
 
 type Props = {
@@ -14,6 +15,7 @@ type Props = {
 
 export default function GroceryListView({ list, store, areas, suggestions }: Props) {
   const router = useRouter();
+  const { register, unregister } = useGroceryActions();
   const [mode, setMode] = useState<"plan" | "shop">("plan");
   const [items, setItems] = useState<GroceryListItem[]>(list.items);
   const [showAdd, setShowAdd] = useState(false);
@@ -21,18 +23,37 @@ export default function GroceryListView({ list, store, areas, suggestions }: Pro
   const [completing, setCompleting] = useState(false);
   const [clearing, setClearing] = useState(false);
 
+  // Register Complete Trip action with the SideNav context
+  useEffect(() => {
+    register({
+      storeName: store.name,
+      completeTrip: handleComplete,
+    });
+    return () => unregister();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.name, completing]);
+
   // Group items by area
-  const groups = new Map<string, { areaId: number | null; items: GroceryListItem[] }>();
-  for (const item of items) {
-    const key = item.area?.name ?? "__none__";
-    if (!groups.has(key)) groups.set(key, { areaId: item.areaId, items: [] });
-    groups.get(key)!.items.push(item);
+  const unpurchased = items.filter((i) => !i.purchased);
+  const purchased = items.filter((i) => i.purchased);
+
+  function buildGroups(list: GroceryListItem[]) {
+    const groups = new Map<string, { areaId: number | null; items: GroceryListItem[] }>();
+    for (const item of list) {
+      const key = item.area?.name ?? "__none__";
+      if (!groups.has(key)) groups.set(key, { areaId: item.areaId, items: [] });
+      groups.get(key)!.items.push(item);
+    }
+    return groups;
   }
-  const sortedKeys = [...groups.keys()].sort((a, b) => {
-    if (a === "__none__") return 1;
-    if (b === "__none__") return -1;
-    return a.localeCompare(b);
-  });
+
+  function sortedKeys(groups: Map<string, { areaId: number | null; items: GroceryListItem[] }>) {
+    return [...groups.keys()].sort((a, b) => {
+      if (a === "__none__") return 1;
+      if (b === "__none__") return -1;
+      return a.localeCompare(b);
+    });
+  }
 
   function handleSaved(saved: GroceryListItem) {
     setItems((prev) => {
@@ -49,12 +70,25 @@ export default function GroceryListView({ list, store, areas, suggestions }: Pro
   }
 
   async function handleCheck(item: GroceryListItem) {
-    // Optimistic: remove from shop view
-    setItems((prev) => prev.filter((i) => i.id !== item.id));
+    // Optimistically mark as purchased (keep in view, show as checked)
+    setItems((prev) =>
+      prev.map((i) => (i.id === item.id ? { ...i, purchased: true } : i))
+    );
     await fetch(`/api/grocery/lists/${list.id}/items/${item.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ purchased: true }),
+    });
+  }
+
+  async function handleUncheck(item: GroceryListItem) {
+    setItems((prev) =>
+      prev.map((i) => (i.id === item.id ? { ...i, purchased: false } : i))
+    );
+    await fetch(`/api/grocery/lists/${list.id}/items/${item.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ purchased: false }),
     });
   }
 
@@ -76,6 +110,11 @@ export default function GroceryListView({ list, store, areas, suggestions }: Pro
     setMode("plan");
     setClearing(false);
   }
+
+  const unpurchasedGroups = buildGroups(unpurchased);
+  const unpurchasedKeys = sortedKeys(unpurchasedGroups);
+  const purchasedGroups = buildGroups(purchased);
+  const purchasedKeys = sortedKeys(purchasedGroups);
 
   return (
     <>
@@ -117,8 +156,8 @@ export default function GroceryListView({ list, store, areas, suggestions }: Pro
             </div>
           ) : (
             <div className="flex flex-col gap-6 mb-6">
-              {sortedKeys.map((key) => {
-                const group = groups.get(key)!;
+              {sortedKeys(buildGroups(items)).map((key) => {
+                const group = buildGroups(items).get(key)!;
                 return (
                   <div key={key}>
                     <div
@@ -182,15 +221,26 @@ export default function GroceryListView({ list, store, areas, suggestions }: Pro
             </div>
           )}
 
-          <button className="btn-primary btn-sm" onClick={() => setShowAdd(true)}>
-            + Add Item
-          </button>
+          <div className="flex gap-2 flex-wrap">
+            <button className="btn-primary btn-sm" onClick={() => setShowAdd(true)}>
+              + Add Item
+            </button>
+            {items.length > 0 && (
+              <button
+                className="btn-danger btn-sm"
+                onClick={handleClear}
+                disabled={clearing}
+              >
+                {clearing ? "Clearing…" : "Clear List"}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
       {/* Shop Mode */}
       {mode === "shop" && (
-        <div className="pb-24">
+        <div>
           {items.length === 0 ? (
             <div className="card text-center py-12">
               <p style={{ color: "var(--text-secondary)" }}>No items in list.</p>
@@ -200,8 +250,9 @@ export default function GroceryListView({ list, store, areas, suggestions }: Pro
             </div>
           ) : (
             <div className="flex flex-col gap-6">
-              {sortedKeys.map((key) => {
-                const group = groups.get(key)!;
+              {/* Unpurchased items */}
+              {unpurchasedKeys.map((key) => {
+                const group = unpurchasedGroups.get(key)!;
                 return (
                   <div key={key}>
                     <div
@@ -224,6 +275,7 @@ export default function GroceryListView({ list, store, areas, suggestions }: Pro
                           type="checkbox"
                           className="w-5 h-5 shrink-0 cursor-pointer"
                           style={{ accentColor: "var(--accent-orange)" }}
+                          checked={false}
                           readOnly
                         />
                         <div className="flex-1 min-w-0">
@@ -241,29 +293,68 @@ export default function GroceryListView({ list, store, areas, suggestions }: Pro
                   </div>
                 );
               })}
+
+              {/* Purchased items */}
+              {purchased.length > 0 && (
+                <div>
+                  <div
+                    className="text-xs font-semibold uppercase tracking-widest pb-1 mb-1"
+                    style={{ color: "var(--text-secondary)", borderBottom: "1px solid var(--bg-200)" }}
+                  >
+                    In Cart
+                  </div>
+                  {purchasedKeys.map((key) => {
+                    const group = purchasedGroups.get(key)!;
+                    return (
+                      <div key={key} className="mb-2">
+                        {purchasedKeys.length > 1 && key !== "__none__" && (
+                          <div className="text-xs pl-2 mb-0.5" style={{ color: "var(--text-secondary)" }}>
+                            {key}
+                          </div>
+                        )}
+                        {group.items.map((item, idx) => (
+                          <div
+                            key={item.id}
+                            className="shop-item flex items-center gap-3 px-3 py-2 cursor-pointer"
+                            style={{
+                              backgroundColor: idx % 2 === 0 ? "var(--bg-100)" : "var(--bg-200)",
+                              borderRadius: "4px",
+                              opacity: 0.6,
+                            }}
+                            onClick={() => handleUncheck(item)}
+                          >
+                            <input
+                              type="checkbox"
+                              className="w-5 h-5 shrink-0 cursor-pointer"
+                              style={{ accentColor: "var(--accent-orange)" }}
+                              checked={true}
+                              readOnly
+                            />
+                            <div className="flex-1 min-w-0">
+                              <span
+                                className="text-sm"
+                                style={{
+                                  color: "var(--text-secondary)",
+                                  textDecoration: "line-through",
+                                }}
+                              >
+                                {item.name}
+                              </span>
+                              {item.quantity && (
+                                <span className="text-xs ml-2" style={{ color: "var(--text-secondary)" }}>
+                                  {item.quantity}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
-
-          {/* Sticky bottom bar */}
-          <div
-            className="fixed bottom-0 left-0 right-0 flex gap-3 p-4 z-30 md:left-60"
-            style={{ backgroundColor: "var(--bg-100)", borderTop: "1px solid var(--bg-300)" }}
-          >
-            <button
-              className="btn-primary flex-1"
-              onClick={handleComplete}
-              disabled={completing}
-            >
-              {completing ? "Completing…" : "Complete Trip"}
-            </button>
-            <button
-              className="btn-danger"
-              onClick={handleClear}
-              disabled={clearing}
-            >
-              {clearing ? "Clearing…" : "Clear List"}
-            </button>
-          </div>
         </div>
       )}
 
