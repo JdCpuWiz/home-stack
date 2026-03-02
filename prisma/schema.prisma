@@ -65,3 +65,68 @@ model TodoItem {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
+
+// ─── Grocery ─────────────────────────────────────────────────────
+model GroceryStore {
+  id        Int           @id @default(autoincrement())
+  name      String        @unique
+  position  Int           @default(0)
+  createdAt DateTime      @default(now())
+  lists     GroceryList[]
+}
+
+model GroceryArea {
+  id        Int               @id @default(autoincrement())
+  name      String            @unique
+  position  Int               @default(0)
+  createdAt DateTime          @default(now())
+  items     GroceryListItem[]
+}
+
+enum GroceryListStatus {
+  ACTIVE
+  COMPLETED
+}
+
+model GroceryList {
+  id        Int               @id @default(autoincrement())
+  storeId   Int
+  store     GroceryStore      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  status    GroceryListStatus @default(ACTIVE)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  items     GroceryListItem[]
+  trips     GroceryTrip[]
+}
+
+model GroceryListItem {
+  id        Int          @id @default(autoincrement())
+  listId    Int
+  list      GroceryList  @relation(fields: [listId], references: [id], onDelete: Cascade)
+  areaId    Int?
+  area      GroceryArea? @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  name      String
+  quantity  String?
+  purchased Boolean      @default(false)
+  position  Int          @default(0)
+  createdAt DateTime     @default(now())
+}
+
+model GroceryTrip {
+  id          Int               @id @default(autoincrement())
+  listId      Int
+  list        GroceryList       @relation(fields: [listId], references: [id])
+  storeName   String
+  completedAt DateTime          @default(now())
+  items       GroceryTripItem[]
+}
+
+model GroceryTripItem {
+  id        Int         @id @default(autoincrement())
+  tripId    Int
+  trip      GroceryTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  name      String
+  quantity  String?
+  areaName  String?
+  purchased Boolean
+}

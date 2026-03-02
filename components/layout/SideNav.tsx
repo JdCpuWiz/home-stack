@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { Package, Plus, CheckSquare, Search, Users, X } from "lucide-react";
+import { Package, Plus, CheckSquare, Search, Users, X, ShoppingCart, History, Settings } from "lucide-react";
 
 type Props = {
   open: boolean;
@@ -164,6 +164,26 @@ export default function SideNav({ open, onClose }: Props) {
             />
           )}
 
+          {session && (
+            <>
+              <SectionLabel label="Grocery" />
+              <NavLink
+                href="/grocery"
+                label="All Stores"
+                icon={<ShoppingCart size={15} />}
+                exact
+                onClick={onClose}
+              />
+              <NavLink
+                href="/grocery/history"
+                label="History"
+                icon={<History size={15} />}
+                exact
+                onClick={onClose}
+              />
+            </>
+          )}
+
           <SectionNavLink
             href="/search"
             label="Search"
@@ -179,6 +199,12 @@ export default function SideNav({ open, onClose }: Props) {
                 href="/settings/users"
                 label="Users"
                 icon={<Users size={15} />}
+                onClick={onClose}
+              />
+              <NavLink
+                href="/settings/grocery"
+                label="Grocery Settings"
+                icon={<Settings size={15} />}
                 onClick={onClose}
               />
             </>

@@ -25,7 +25,48 @@ async function main() {
   console.log(`Change the password immediately!`);
 }
 
+async function seedGrocery() {
+  const stores = [
+    { name: "Walmart", position: 0 },
+    { name: "Sam's Club", position: 1 },
+    { name: "Aldi", position: 2 },
+  ];
+
+  for (const s of stores) {
+    await prisma.groceryStore.upsert({
+      where: { name: s.name },
+      update: { position: s.position },
+      create: s,
+    });
+  }
+  console.log(`Seeded ${stores.length} grocery stores.`);
+
+  const areas = [
+    "Produce",
+    "Meat",
+    "Dairy",
+    "Frozen",
+    "Bakery",
+    "Deli",
+    "Canned Goods",
+    "Beverages",
+    "Snacks",
+    "Household",
+    "Personal Care",
+  ];
+
+  for (let i = 0; i < areas.length; i++) {
+    await prisma.groceryArea.upsert({
+      where: { name: areas[i] },
+      update: { position: i },
+      create: { name: areas[i], position: i },
+    });
+  }
+  console.log(`Seeded ${areas.length} grocery areas.`);
+}
+
 main()
+  .then(() => seedGrocery())
   .catch((e) => {
     console.error(e);
     process.exit(1);
