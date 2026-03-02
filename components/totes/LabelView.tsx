@@ -68,6 +68,7 @@ export default function LabelView({ toteId, title, items, url }: Props) {
           }
           .no-print { display: none !important; }
           .print-only { display: block !important; }
+          header, aside, nav { display: none !important; }
         }
 
         .print-only { display: none; }

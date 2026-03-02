@@ -48,3 +48,20 @@ model TotePhoto {
   filename  String
   createdAt DateTime @default(now())
 }
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model TodoItem {
+  id        Int       @id @default(autoincrement())
+  title     String
+  notes     String?
+  dueDate   DateTime?
+  priority  Priority  @default(MEDIUM)
+  category  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}

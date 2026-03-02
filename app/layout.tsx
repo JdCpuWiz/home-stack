@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import SessionWrapper from "@/components/layout/SessionWrapper";
-import Header from "@/components/layout/Header";
+import Shell from "@/components/layout/Shell";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -24,8 +24,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className={`${poppins.variable} antialiased`}>
         <SessionWrapper>
-          <Header />
-          <main className="max-w-5xl mx-auto px-4 py-6">{children}</main>
+          <Shell>{children}</Shell>
         </SessionWrapper>
       </body>
     </html>
