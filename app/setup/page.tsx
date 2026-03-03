@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { Suspense } from "react";
 import SetupForm from "./SetupForm";
 
+export const dynamic = "force-dynamic";
+
 export default async function SetupPage() {
   const count = await prisma.user.count();
   if (count > 0) redirect("/");
