@@ -130,3 +130,35 @@ model GroceryTripItem {
   areaName  String?
   purchased Boolean
 }
+
+// ─── Recipes ──────────────────────────────────────────────────────
+model Recipe {
+  id          Int                @id @default(autoincrement())
+  title       String
+  servings    String?
+  sourceUrl   String?
+  notes       String?            @db.Text
+  tags        String[]
+  ingredients RecipeIngredient[]
+  steps       RecipeStep[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model RecipeIngredient {
+  id       Int    @id @default(autoincrement())
+  recipeId Int
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  quantity String?
+  unit     String?
+  name     String
+  position Int
+}
+
+model RecipeStep {
+  id          Int    @id @default(autoincrement())
+  recipeId    Int
+  recipe      Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  stepNumber  Int
+  instruction String @db.Text
+}

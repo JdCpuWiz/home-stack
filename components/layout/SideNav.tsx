@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Package, Plus, CheckSquare, Search, Users, X, ShoppingCart, History, Settings, CheckCheck, LogOut, LogIn, List, Trash2 } from "lucide-react";
+import { Package, Plus, CheckSquare, Search, Users, X, ShoppingCart, History, Settings, CheckCheck, LogOut, LogIn, List, Trash2, UtensilsCrossed } from "lucide-react";
 import { useGroceryActions } from "@/components/grocery/GroceryActionsContext";
 
 type Props = {
@@ -203,6 +203,26 @@ export default function SideNav({ open, onClose }: Props) {
                   router.push("/todos");
                   router.refresh();
                 }}
+              />
+            </>
+          )}
+
+          {session && (
+            <>
+              <SectionLabel label="Recipes" />
+              <NavLink
+                href="/recipes"
+                label="All Recipes"
+                icon={<UtensilsCrossed size={15} />}
+                exact
+                onClick={onClose}
+              />
+              <NavLink
+                href="/recipes/new"
+                label="New Recipe"
+                icon={<Plus size={15} />}
+                exact
+                onClick={onClose}
               />
             </>
           )}
