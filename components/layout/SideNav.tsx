@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -146,16 +147,11 @@ export default function SideNav({ open, onClose }: Props) {
       >
         {/* Brand + mobile close */}
         <div
-          className="flex items-center justify-between px-4 h-14 shrink-0"
+          className="flex items-center justify-between px-4 py-3 shrink-0"
           style={{ borderBottom: "1px solid var(--bg-200)" }}
         >
-          <Link
-            href="/"
-            className="text-lg font-bold"
-            style={{ color: "var(--accent-orange)" }}
-            onClick={onClose}
-          >
-            HomeStack
+          <Link href="/" onClick={onClose} aria-label="HomeStack home">
+            <Image src="/logo.png" alt="HomeStack" width={128} height={86} style={{ objectFit: "contain", borderRadius: "6px" }} />
           </Link>
           <button
             className="md:hidden btn-secondary btn-sm p-1.5"
