@@ -18,6 +18,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   if (!name?.trim()) return NextResponse.json({ error: "Name is required" }, { status: 400 });
 
+  // Duplicate check — case-insensitive, only unpurchased items
+  const existing = await prisma.groceryListItem.findFirst({
+    where: {
+      listId,
+      purchased: false,
+      name: { equals: name.trim(), mode: "insensitive" },
+    },
+  });
+  if (existing) return NextResponse.json({ error: "Item already on list" }, { status: 409 });
+
   const count = await prisma.groceryListItem.count({ where: { listId } });
   const item = await prisma.groceryListItem.create({
     data: {

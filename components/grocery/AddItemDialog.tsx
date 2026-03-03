@@ -17,6 +17,7 @@ export default function AddItemDialog({ listId, areas, suggestions, item, onSave
   const [quantity, setQuantity] = useState(item?.quantity ?? "");
   const [areaId, setAreaId] = useState<string>(item?.areaId?.toString() ?? "");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -46,6 +47,8 @@ export default function AddItemDialog({ listId, areas, suggestions, item, onSave
       const saved = await res.json();
       onSave(saved);
       onClose();
+    } else if (res.status === 409) {
+      setError("Already on list");
     }
     setSaving(false);
   }
@@ -72,7 +75,7 @@ export default function AddItemDialog({ listId, areas, suggestions, item, onSave
               ref={nameRef}
               className="input w-full"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => { setName(e.target.value); setError(null); }}
               list="item-suggestions"
               placeholder="e.g. Milk"
               autoFocus
@@ -115,6 +118,9 @@ export default function AddItemDialog({ listId, areas, suggestions, item, onSave
             </select>
           </div>
 
+          {error && (
+            <p className="text-xs" style={{ color: "#ef4444" }}>{error}</p>
+          )}
           <div className="flex gap-2 justify-end mt-2">
             <button type="button" className="btn-secondary btn-sm" onClick={onClose}>
               Cancel
