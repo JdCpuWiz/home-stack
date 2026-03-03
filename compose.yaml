@@ -1,6 +1,6 @@
 services:
   homestack:
-    build: .
+    image: ghcr.io/jdcpuwiz/home-stack:latest
     restart: unless-stopped
     ports:
       - "${PORT:-3000}:3000"
