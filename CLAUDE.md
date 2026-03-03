@@ -319,6 +319,8 @@ docker compose up -d --build
 | `NEXTAUTH_URL` | Public URL (e.g. `https://homestack.deckerzoo.com`) |
 | `PORT` | Host port (default 3000 internally, mapped via compose) |
 | `PUID` / `PGID` | File ownership for uploads (set to match host user) |
+| `OLLAMA_URL` | Ollama base URL for recipe scan (default: `http://localhost:11434`) |
+| `OLLAMA_MODEL` | Ollama model name (default: `llava`; must be multimodal for photo scan) |
 
 ## Gotchas
 
