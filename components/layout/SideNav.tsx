@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Package, Plus, CheckSquare, Search, Users, X, ShoppingCart, History, Settings, CheckCheck, LogOut, LogIn, List, Trash2, UtensilsCrossed } from "lucide-react";
+import { Package, Plus, CheckSquare, Search, Users, X, ShoppingCart, History, Settings, CheckCheck, LogOut, LogIn, List, Trash2, UtensilsCrossed, LayoutDashboard } from "lucide-react";
 import { useGroceryActions } from "@/components/grocery/GroceryActionsContext";
 
 type Props = {
@@ -163,6 +163,16 @@ export default function SideNav({ open, onClose }: Props) {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3">
+          {session && (
+            <SectionNavLink
+              href="/"
+              label="Dashboard"
+              icon={<LayoutDashboard size={15} />}
+              exact
+              onClick={onClose}
+            />
+          )}
+
           {session && (
             <>
               <SectionLabel label="Totes" />
