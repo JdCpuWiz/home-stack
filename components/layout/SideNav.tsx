@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Package, Plus, CheckSquare, Search, Users, X, ShoppingCart, History, Settings, CheckCheck, LogOut, LogIn } from "lucide-react";
+import { Package, Plus, CheckSquare, Search, Users, X, ShoppingCart, History, Settings, CheckCheck, LogOut, LogIn, List, Trash2 } from "lucide-react";
 import { useGroceryActions } from "@/components/grocery/GroceryActionsContext";
 
 type Props = {
@@ -120,6 +120,7 @@ export default function SideNav({ open, onClose }: Props) {
     session && (session.user as { role?: string }).role === "ADMIN";
   const [stores, setStores] = useState<Store[]>([]);
   const { actions } = useGroceryActions();
+  const router = useRouter();
 
   useEffect(() => {
     if (!session) return;
@@ -188,12 +189,27 @@ export default function SideNav({ open, onClose }: Props) {
           )}
 
           {session && (
-            <SectionNavLink
-              href="/todos"
-              label="Todos"
-              icon={<CheckSquare size={15} />}
-              onClick={onClose}
-            />
+            <>
+              <SectionLabel label="Todos" />
+              <NavLink
+                href="/todos"
+                label="View List"
+                icon={<List size={15} />}
+                onClick={onClose}
+              />
+              <NavActionButton
+                label="Clear List"
+                icon={<Trash2 size={15} />}
+                danger
+                onClick={async () => {
+                  if (!confirm("Clear all todos?")) return;
+                  await fetch("/api/todos", { method: "DELETE" });
+                  onClose();
+                  router.push("/todos");
+                  router.refresh();
+                }}
+              />
+            </>
           )}
 
           {session && (
