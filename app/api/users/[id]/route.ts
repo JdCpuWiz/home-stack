@@ -22,6 +22,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   const body = await request.json();
   const { password, role } = body as { password?: string; role?: "ADMIN" | "USER" };
 
+  if (password && (password.length < 8 || password.length > 72)) {
+    return NextResponse.json({ error: "Password must be 8–72 characters" }, { status: 400 });
+  }
+
   const data: Record<string, unknown> = {};
   if (password) data.passwordHash = await bcrypt.hash(password, 12);
   if (role === "ADMIN" || role === "USER") data.role = role;

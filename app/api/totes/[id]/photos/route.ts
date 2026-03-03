@@ -6,6 +6,9 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "gif", "webp", "avif"]);
+
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(req: NextRequest, { params }: Params) {
@@ -23,11 +26,19 @@ export async function POST(req: NextRequest, { params }: Params) {
   const file = formData.get("photo") as File | null;
   if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
 
+  if (file.size > MAX_FILE_SIZE) {
+    return NextResponse.json({ error: "File too large (max 10 MB)" }, { status: 413 });
+  }
+
   if (!file.type.startsWith("image/")) {
     return NextResponse.json({ error: "File must be an image" }, { status: 400 });
   }
 
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (!ALLOWED_EXTENSIONS.has(ext)) {
+    return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
+  }
+
   const filename = `${randomUUID()}.${ext}`;
   const dir = join(process.cwd(), "public", "uploads", "totes", String(toteId));
   await mkdir(dir, { recursive: true });

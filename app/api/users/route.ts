@@ -37,6 +37,9 @@ export async function POST(request: NextRequest) {
   if (!username?.trim() || !email?.trim() || !password) {
     return NextResponse.json({ error: "All fields required" }, { status: 400 });
   }
+  if (password.length < 8 || password.length > 72) {
+    return NextResponse.json({ error: "Password must be 8–72 characters" }, { status: 400 });
+  }
 
   const existing = await prisma.user.findFirst({
     where: { OR: [{ username }, { email }] },
