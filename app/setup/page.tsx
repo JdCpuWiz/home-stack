@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Suspense } from "react";
-import LoginForm from "./LoginForm";
+import SetupForm from "./SetupForm";
 
-export default async function LoginPage() {
+export default async function SetupPage() {
   const count = await prisma.user.count();
-  if (count === 0) redirect("/setup");
+  if (count > 0) redirect("/");
 
   return (
     <div
@@ -13,7 +13,7 @@ export default async function LoginPage() {
       style={{ backgroundColor: "var(--bg-base)" }}
     >
       <Suspense fallback={null}>
-        <LoginForm />
+        <SetupForm />
       </Suspense>
     </div>
   );

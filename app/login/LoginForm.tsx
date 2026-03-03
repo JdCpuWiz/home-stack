@@ -8,6 +8,7 @@ export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+  const setupDone = searchParams.get("setup") === "1";
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -43,6 +44,11 @@ export default function LoginForm() {
         <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
           Sign in to your account
         </p>
+        {setupDone && (
+          <p className="text-sm mt-2" style={{ color: "var(--accent-orange)" }}>
+            Account created — sign in to continue
+          </p>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
