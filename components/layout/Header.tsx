@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Menu } from "lucide-react";
 
 type Props = {
@@ -27,7 +26,7 @@ export default function Header({ onMenuClick }: Props) {
           <Menu size={18} />
         </button>
         <Link href="/" aria-label="HomeStack home">
-          <Image src="/logo.png" alt="HomeStack" height={36} width={54} style={{ objectFit: "contain" }} />
+          <img src="/logo.png" alt="HomeStack" style={{ height: "36px", width: "auto" }} />
         </Link>
       </div>
     </header>

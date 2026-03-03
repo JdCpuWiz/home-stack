@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -151,7 +150,7 @@ export default function SideNav({ open, onClose }: Props) {
           style={{ borderBottom: "1px solid var(--bg-200)" }}
         >
           <Link href="/" onClick={onClose} aria-label="HomeStack home">
-            <Image src="/logo.png" alt="HomeStack" width={128} height={86} style={{ objectFit: "contain", borderRadius: "6px" }} />
+            <img src="/logo.png" alt="HomeStack" style={{ width: "128px", height: "auto", borderRadius: "6px" }} />
           </Link>
           <button
             className="md:hidden btn-secondary btn-sm p-1.5"
