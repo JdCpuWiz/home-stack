@@ -1,15 +1,14 @@
 # HomeStack — Deployment Guide
 
-## Prerequisites on the remote server
+## Requirements
 
 - Docker + Docker Compose v2
-- Git
-- Access to the remote Postgres server from the remote host
-- A reverse proxy (Traefik, Nginx, Caddy, etc.) fronting port 3000
+- PostgreSQL database — HomeStack does **not** bundle a database. You need an external Postgres instance reachable from the Docker host.
+- A reverse proxy (Traefik, Nginx, Caddy, etc.) to handle HTTPS and routing
 
 ---
 
-## 1. Clone the repo
+## 1. Get the files
 
 ```bash
 git clone https://github.com/JdCpuWiz/home-stack.git
@@ -18,26 +17,31 @@ cd home-stack
 
 ---
 
-## 2. Create the `.env` file
+## 2. Configure environment
 
 ```bash
 cp .env.example .env
-nano .env
 ```
 
-Fill in all values:
+Edit `.env` and fill in all values:
 
 ```env
-# Postgres connection string (remote server)
+# Postgres connection string
 DATABASE_URL="postgresql://user:password@host:5432/homestack?schema=public"
 
-# Random secret for NextAuth JWT signing
-NEXTAUTH_SECRET="<random secret>"
+# Random secret for session signing — generate with:
+#   openssl rand -base64 32
+NEXTAUTH_SECRET="your-secret-here"
 
-# Public URL the app is served at (used in QR codes on labels)
-NEXTAUTH_URL="https://homestack.example.com"
+# Public URL the app is served at (must match your reverse proxy)
+# Also used to generate QR code URLs on tote labels
+NEXTAUTH_URL="https://homestack.yourdomain.com"
 
-# User/group ID for file permissions (match your server user)
+# Host port to expose (container always listens on 3000 internally)
+PORT=3000
+
+# Match these to your server user to avoid permission issues on uploaded files
+# Run `id` on your server to find your values
 PUID=1000
 PGID=1000
 
@@ -45,87 +49,67 @@ PGID=1000
 TZ=America/New_York
 ```
 
-**Generate a secure `NEXTAUTH_SECRET`:**
-```bash
-openssl rand -base64 32
-```
-
-**Find your PUID/PGID:**
-```bash
-id
-# uid=1000(youruser) gid=1000(youruser)
-```
-
 ---
 
-## 3. Build and start
+## 3. Start
 
 ```bash
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
-This will:
-1. Build the Next.js app inside Docker (multi-stage, node:20-alpine)
-2. Run `prisma db push` on startup to sync the schema to your Postgres DB
-3. Start the app listening on `0.0.0.0:3000`
+On first start, `entrypoint.sh` runs `prisma db push` to create the schema, then starts the app. Check logs with:
 
-**Check logs:**
 ```bash
 docker compose logs -f
 ```
 
-Look for `Ready` to confirm startup. You'll see Prisma sync output first, then the Next.js server.
+Wait for `Ready` in the output before proceeding.
 
 ---
 
-## 4. Seed the first admin user
+## 4. First-run setup
 
-Run once after the first deployment:
-
-```bash
-docker compose exec homestack sh -c "npx ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"
-```
-
-To customise the credentials:
-
-```bash
-docker compose exec homestack sh -c "
-  SEED_USERNAME=admin \
-  SEED_EMAIL=admin@example.com \
-  SEED_PASSWORD=changeme \
-  npx ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts
-"
-```
-
-**Change the password immediately** after first login via Settings → Users.
+Open your app URL in a browser. You will be redirected to `/setup` where you create your admin account (username, email, password). This only appears once — after the first account is created, the setup page is permanently disabled.
 
 ---
 
-## 5. Point your reverse proxy at port 3000
+## 5. Configure your reverse proxy
 
-The app listens on port 3000. Configure your reverse proxy to forward traffic to it.
+The app listens on the port set in `PORT` (default `3000`). Point your reverse proxy at it and ensure:
 
-**NEXTAUTH_URL must match the public URL** your proxy serves the app on — this is also used to build the QR code URLs printed on labels.
+- **HTTPS** is terminated at the proxy
+- The `Host` header is forwarded
+- `NEXTAUTH_URL` in `.env` matches the exact public URL (including `https://`)
 
 ---
 
 ## 6. Verify
 
-- Open your configured URL in a browser
-- You should be redirected to `/login`
-- Sign in with your seeded credentials
-- Change the password via the **Users** link in the header
+- Navigate to your configured URL
+- You should see the setup wizard on first visit, or the login page if setup is already complete
+- Sign in and confirm the app loads
 
 ---
 
 ## Updating
 
 ```bash
-git pull origin main
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
-Schema changes are applied automatically on startup via `prisma db push`.
+Schema migrations run automatically on startup via `prisma db push`. Your uploaded photos and database data are unaffected — photos are bind-mounted from `./uploads/` on the host and the database is external.
+
+---
+
+## Data & Persistence
+
+| Data | Where it lives | Survives updates? |
+|---|---|---|
+| Database (totes, todos, grocery) | External Postgres | Yes — external |
+| Uploaded photos | `./uploads/` on host | Yes — bind mount |
+| App configuration | `.env` on host | Yes |
 
 ---
 
@@ -137,14 +121,18 @@ docker compose logs homestack
 ```
 Usually a missing or malformed `DATABASE_URL` or `NEXTAUTH_SECRET`.
 
-**Prisma db push fails**
-- Confirm the DB host is reachable from the Docker host: `docker compose exec homestack ping <db-host>`
-- Check `DATABASE_URL` credentials and database name
-- The DB user needs SELECT, INSERT, UPDATE, DELETE, CREATE TABLE privileges — but NOT create database
+**`prisma db push` fails on startup**
+- Confirm the DB is reachable from the Docker host: `docker compose exec homestack ping <db-host>`
+- Verify `DATABASE_URL` credentials and database name
+- The DB user needs `SELECT`, `INSERT`, `UPDATE`, `DELETE`, `CREATE TABLE` — but **not** `CREATE DATABASE`
 
-**App loads but login redirects incorrectly**
-- Check `NEXTAUTH_URL` is set to the exact public URL (with `https://`)
-- Ensure your reverse proxy passes the `Host` header through
+**Login redirects incorrectly / infinite loop**
+- Verify `NEXTAUTH_URL` is set to the exact public URL (with `https://`)
+- Ensure your reverse proxy passes the `Host` header
 
-**QR codes point to the wrong URL**
-- `NEXTAUTH_URL` is used to build the QR code link on labels — must be the correct public HTTPS URL
+**QR codes on tote labels point to the wrong URL**
+- `NEXTAUTH_URL` is used to build the QR code URL — must be the correct public HTTPS URL
+
+**Photos not loading after update**
+- Confirm the `./uploads` volume is present in `compose.yaml` and the directory exists on the host
+- Check `PUID`/`PGID` match your server user (`id` on the host)
