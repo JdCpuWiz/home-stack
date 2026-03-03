@@ -20,7 +20,7 @@ type NavItemProps = {
   onClick?: () => void;
 };
 
-type Store = { id: number; name: string };
+type Store = { id: number; name: string; activeItemCount: number };
 
 /** Sub-item link (indented, smaller) */
 function NavLink({ href, label, icon, exact, onClick }: NavItemProps) {
@@ -167,7 +167,7 @@ export default function SideNav({ open, onClose }: Props) {
             <>
               <SectionLabel label="Totes" />
               <NavLink
-                href="/"
+                href="/totes"
                 label="All Totes"
                 icon={<Package size={15} />}
                 exact
@@ -241,7 +241,7 @@ export default function SideNav({ open, onClose }: Props) {
                 <NavLink
                   key={store.id}
                   href={`/grocery/${store.id}`}
-                  label={store.name}
+                  label={store.activeItemCount > 0 ? `${store.name} (${store.activeItemCount})` : store.name}
                   icon={<ShoppingCart size={13} />}
                   onClick={onClose}
                 />

@@ -7,8 +7,26 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const stores = await prisma.groceryStore.findMany({ orderBy: { position: "asc" } });
-  return NextResponse.json(stores);
+  const stores = await prisma.groceryStore.findMany({
+    orderBy: { position: "asc" },
+    include: {
+      lists: {
+        where: { status: "ACTIVE" },
+        include: {
+          _count: { select: { items: { where: { purchased: false } } } },
+        },
+      },
+    },
+  });
+
+  return NextResponse.json(
+    stores.map((s) => ({
+      id: s.id,
+      name: s.name,
+      position: s.position,
+      activeItemCount: s.lists[0]?._count.items ?? 0,
+    }))
+  );
 }
 
 export async function POST(request: NextRequest) {
