@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**HomeStack** is a self-hosted home management platform, starting with a tote inventory module. Each tote has a title and a free-text item list. Physical totes get thermal labels printed with a QR code linking to the tote's detail page. A global search is publicly accessible; all other features require authentication.
+**HomeStack** is a self-hosted home management platform with three modules: Totes (labeled storage inventory), Todos, and Grocery Lists. Physical totes get thermal labels printed with a QR code linking to the tote's detail page. A global search is publicly accessible; all other features require authentication.
 
 This is intended to be the first of a suite of home management apps sharing the same auth system, design system, and deployment infrastructure.
 
@@ -13,9 +13,9 @@ This is intended to be the first of a suite of home management apps sharing the 
 Follows the same stack as the sibling projects **wiz3d_prints** and **wiz3dtools**:
 
 - **Framework**: Next.js (App Router) + TypeScript
-- **Styling**: Tailwind CSS (dark mode only — `dark` class forced on `<html>`)
+- **Styling**: Tailwind CSS v4 (dark mode only — `dark` class forced on `<html>`)
 - **UI Components**: shadcn/ui
-- **Auth**: NextAuth.js (credentials provider, session-based)
+- **Auth**: NextAuth.js (credentials provider, JWT sessions)
 - **Database**: PostgreSQL with Prisma ORM (external managed Postgres — not in Docker Compose)
 - **Package Manager**: npm
 - **Deployment**: Docker Compose, reverse-proxied by Traefik
@@ -31,18 +31,22 @@ npm start          # production server
 npm run lint
 
 # Prisma / database
-npx prisma migrate dev       # create and apply a new migration
-npx prisma migrate deploy    # apply migrations in production
+npx prisma db push           # apply schema changes (use instead of migrate — managed Postgres)
 npx prisma studio            # visual DB explorer
-npx prisma db seed           # run prisma/seed.ts
+npx prisma db seed           # run prisma/seed.ts (creates admin/changeme user + seeded data)
+
+# Versioning (no git tag)
+npm version patch --no-git-tag-version
+npm version minor --no-git-tag-version
+npm version major --no-git-tag-version
 ```
 
 ## Design System
 
-Identical to wiz3d_prints / wiz3dtools — always dark, never toggled.
+Always dark, never toggled. `dark` class forced on `<html>` in layout.tsx.
 
 ### Colors
-- **Background layers**: `#0a0a0a` (iron-950), `#1a1a1a`, `#2d2d2d`, `#3a3a3a`, `#4a4a4a`
+- **Background layers**: `#0a0a0a` (bg-base), `#1a1a1a` (bg-100), `#2d2d2d` (bg-200), `#3a3a3a` (bg-300), `#4a4a4a` (bg-400)
 - **Text**: `#e5e5e5` primary, `#d1d5db` secondary
 - **Orange accent**: `#ff9900` / `#e68a00`
 
@@ -53,6 +57,11 @@ Identical to wiz3d_prints / wiz3dtools — always dark, never toggled.
 
 ### CSS Classes (defined in globals.css)
 `.btn-primary`, `.btn-secondary`, `.btn-danger`, `.btn-sm`, `.input`, `.card`, `.card-surface`, `.wiz-table`
+
+### Nav hover (globals.css)
+`.nav-link:hover` and `.section-nav-link:hover` use `!important` on both `background-color` and `color` to override inline styles on active/inactive NavLink elements.
+
+**Important**: Never name a CSS class `list-item` — Tailwind v4 treats it as `display: list-item`, generating a browser bullet `::marker`.
 
 ### Font
 Poppins (Google Fonts)
@@ -67,39 +76,36 @@ NextAuth.js with credentials provider. Session strategy: JWT cookies.
 | `/totes/[id]` (view via QR code) | Public |
 | All other routes | Protected — redirect to `/login` |
 
-Users table managed via Prisma. First user registered becomes admin. Subsequent users created by admin via a settings/users page.
+Login uses `username` field (not email). Users table managed via Prisma. First user via `npx prisma db seed` → `admin/changeme`. Subsequent users created by admin via Settings → Users.
 
 ## Data Model
 
 ```prisma
 model User {
-  id            Int       @id @default(autoincrement())
-  username      String    @unique
-  email         String    @unique
+  id            Int      @id @default(autoincrement())
+  username      String   @unique
+  email         String   @unique
   passwordHash  String
-  role          Role      @default(USER)
-  createdAt     DateTime  @default(now())
+  role          Role     @default(USER)
+  createdAt     DateTime @default(now())
 }
-
 enum Role { ADMIN USER }
 
 model Tote {
-  id        Int          @id @default(autoincrement())
+  id        Int         @id @default(autoincrement())
   title     String
   items     ToteItem[]
   photos    TotePhoto[]
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 }
-
 model ToteItem {
   id          Int    @id @default(autoincrement())
   toteId      Int
   tote        Tote   @relation(fields: [toteId], references: [id], onDelete: Cascade)
-  description String @db.VarChar(100)   // 100 chars — revisit as needed
+  description String @db.VarChar(100)
   position    Int
 }
-
 model TotePhoto {
   id        Int      @id @default(autoincrement())
   toteId    Int
@@ -107,113 +113,222 @@ model TotePhoto {
   filename  String
   createdAt DateTime @default(now())
 }
+
+model TodoItem {
+  id        Int       @id @default(autoincrement())
+  title     String
+  notes     String?
+  dueDate   DateTime?
+  priority  Priority  @default(MEDIUM)
+  category  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+enum Priority { HIGH MEDIUM LOW }
+
+model GroceryStore {
+  id        Int           @id @default(autoincrement())
+  name      String        @unique
+  position  Int
+  createdAt DateTime      @default(now())
+  lists     GroceryList[]
+}
+model GroceryArea {
+  id        Int              @id @default(autoincrement())
+  name      String           @unique
+  position  Int
+  createdAt DateTime         @default(now())
+  items     GroceryListItem[]
+}
+model GroceryList {
+  id        Int              @id @default(autoincrement())
+  storeId   Int
+  store     GroceryStore     @relation(...)
+  status    ListStatus       @default(ACTIVE)
+  items     GroceryListItem[]
+  trips     GroceryTrip[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+enum ListStatus { ACTIVE COMPLETED }
+model GroceryListItem {
+  id        Int          @id @default(autoincrement())
+  listId    Int
+  areaId    Int?
+  name      String
+  quantity  String?
+  purchased Boolean      @default(false)
+  position  Int
+  createdAt DateTime     @default(now())
+}
+model GroceryTrip {
+  id          Int              @id @default(autoincrement())
+  listId      Int
+  storeName   String
+  completedAt DateTime         @default(now())
+  items       GroceryTripItem[]
+}
+model GroceryTripItem {
+  id        Int     @id @default(autoincrement())
+  tripId    Int
+  name      String
+  quantity  String?
+  areaName  String?
+  purchased Boolean @default(false)
+}
 ```
 
 ## Key Features
 
-**Tote detail URL**: `/totes/[id]` — publicly accessible (QR code target). Shows all items, photo grid, and a Print Label button.
+**Totes**: Physical storage bins with labeled items. `/totes/[id]` is public (QR code target). Print label at `/totes/[id]/label` — 4×6 format with QR code.
 
-**Edit**: `/totes/[id]/edit` — protected. Edit tote title and items. Photo upload/delete section below the form (saves immediately on selection).
+**Todos**: Simple task list with priority (HIGH/MEDIUM/LOW), optional due date, notes, category. Grouped display with overdue highlighting.
 
-**Photos**: stored on disk at `public/uploads/totes/[id]/[uuid].[ext]`, served at `/uploads/...`. Web-only — not printed. Volume-mounted in Docker so photos survive rebuilds (`./uploads:/app/public/uploads`).
+**Grocery**: Per-store shopping lists. Single unified list view — check an item to remove it (saved as `purchased: true`). "Complete Trip" archives to `GroceryTrip` history. "Clear List" wipes without archiving. History page shows all past unique items (deduplicated by name), grouped by area — acts as an item catalog to re-add to any store.
 
-**Search**: `/search?q=` — public, spans tote titles and item descriptions.
+**Duplicate prevention**: Adding an item already on the active list (case-insensitive) returns 409.
 
-**Label print view**: `/totes/[id]/label` — minimal page (no nav), 4×6 shipping label format. Vertical layout: title → large QR code (68mm) → 2-column item list. QR code generated client-side with `qrcode.react`. Photos are NOT included.
+**Versioning**: `NEXT_PUBLIC_APP_VERSION` read from `package.json` at build time via `next.config.ts`. Displayed in SideNav footer. Use `patch` for fixes, `minor` for new features, `major` for breaking changes.
 
 ## API Routes
 
+See `docs/API.md` for full documentation including request/response shapes and n8n usage.
+
 ```
-GET  /api/totes                        # list all totes (protected)
-POST /api/totes                        # create tote (protected)
-GET  /api/totes/[id]                   # tote detail + items (public)
-PUT  /api/totes/[id]                   # update tote + items (protected)
-DEL  /api/totes/[id]                   # delete tote (protected)
-POST /api/totes/[id]/photos            # upload photo (protected, multipart)
-DEL  /api/totes/[id]/photos/[photoId]  # delete photo + file (protected)
-GET  /api/search?q=                    # full-text search across totes + items (public)
+# Totes
+GET  /api/totes
+POST /api/totes
+GET  /api/totes/[id]
+PUT  /api/totes/[id]
+DELETE /api/totes/[id]
+POST /api/totes/[id]/photos
+DELETE /api/totes/[id]/photos/[photoId]
+GET  /api/search?q=
+
+# Todos
+GET    /api/todos
+POST   /api/todos
+PUT    /api/todos/[id]
+DELETE /api/todos/[id]
+DELETE /api/todos              # clear all
+
+# Grocery
+GET    /api/grocery/stores
+POST   /api/grocery/stores
+PUT    /api/grocery/stores/[id]
+DELETE /api/grocery/stores/[id]
+POST   /api/grocery/stores/[id]/items   # add to active list (dup check)
+
+GET    /api/grocery/areas
+POST   /api/grocery/areas
+PUT    /api/grocery/areas/[id]
+DELETE /api/grocery/areas/[id]
+
+GET    /api/grocery/lists?storeId=
+POST   /api/grocery/lists
+GET    /api/grocery/lists/[id]
+POST   /api/grocery/lists/[id]/items
+PUT    /api/grocery/lists/[id]/items/[itemId]
+DELETE /api/grocery/lists/[id]/items/[itemId]
+POST   /api/grocery/lists/[id]/complete
+DELETE /api/grocery/lists/[id]/clear
+
+GET    /api/grocery/trips
+GET    /api/grocery/suggestions?storeId=
+
+DELETE /api/grocery/history/items?name=   # purge item from all trip history
 ```
+
+## Layout Architecture
+
+```
+Root layout → SessionWrapper → Shell (client) → [Header + SideNav + main]
+```
+- **Shell**: manages `sidebarOpen` state; wraps with `GroceryActionsProvider`
+- **Header**: mobile-only (`md:hidden`) — hamburger + logo
+- **SideNav**: always visible on desktop (`md:static`), slide-in on mobile. Contains all nav, sign out, version. Fetches stores dynamically via `useEffect`. Reads `GroceryActionsContext` to show "Complete Trip" when on a store page.
+- **GroceryActionsContext**: context provider (in Shell) that lets `GroceryListView` register a `completeTrip` callback consumed by `SideNav`.
 
 ## Project Structure
 
 ```
 app/
-  page.tsx                          # Home — tote list (protected)
-  login/page.tsx + LoginForm.tsx    # Login (Suspense boundary for useSearchParams)
-  search/page.tsx                   # Public search
-  totes/
-    new/page.tsx                    # Create tote (protected)
-    [id]/
-      page.tsx                      # Tote detail + photo grid (public)
-      edit/page.tsx                 # Edit title/items + photo manager (protected)
-      label/page.tsx                # 4x6 print label (public)
-      label/layout.tsx              # No nav wrapper
-  settings/
-    users/page.tsx + UsersClient.tsx  # Admin: user management
+  page.tsx                          # Home — tote list
+  login/page.tsx + LoginForm.tsx
+  search/page.tsx
+  todos/page.tsx
+  totes/[id]/page.tsx               # Public tote detail
+  totes/[id]/edit/page.tsx
+  totes/[id]/label/page.tsx + layout.tsx
+  totes/new/page.tsx
+  grocery/page.tsx                  # All Lists (store cards)
+  grocery/[storeId]/page.tsx        # Active list for store
+  grocery/history/page.tsx          # Item history catalog
+  settings/users/page.tsx + UsersClient.tsx
+  settings/grocery/page.tsx         # Admin: store + area management
   api/
     auth/[...nextauth]/route.ts
-    totes/route.ts
-    totes/[id]/route.ts
-    totes/[id]/photos/route.ts        # POST upload
-    totes/[id]/photos/[photoId]/route.ts  # DELETE
-    users/route.ts
-    users/[id]/route.ts
     search/route.ts
+    totes/route.ts + [id]/route.ts + [id]/photos/... + uploads/...
+    todos/route.ts + [id]/route.ts
+    users/route.ts + [id]/route.ts
+    grocery/stores/route.ts + [id]/route.ts + [id]/items/route.ts
+    grocery/areas/route.ts + [id]/route.ts
+    grocery/lists/route.ts + [id]/route.ts + [id]/items/... + [id]/complete + [id]/clear
+    grocery/trips/route.ts
+    grocery/suggestions/route.ts
+    grocery/history/items/route.ts
+    grocery/trips/[tripId]/items/[itemId]/readd/route.ts
 components/
-  ui/                               # shadcn/ui base components
-  layout/Header.tsx                 # Nav: Search | All Totes | New Tote | Users | Sign out
+  layout/Header.tsx                 # Mobile-only header
+  layout/Shell.tsx                  # Client wrapper + GroceryActionsProvider
+  layout/SideNav.tsx                # Full nav, sign out, dynamic stores
   layout/SessionWrapper.tsx
-  totes/
-    ToteCard.tsx
-    ToteForm.tsx                    # Create/edit title + items
-    TotePhotoManager.tsx            # Upload/delete photos (client component)
-    LabelView.tsx                   # 4x6 label with QR code
-lib/
-  prisma.ts                         # Prisma client singleton
-  auth.ts                           # NextAuth config
-prisma/
-  schema.prisma                     # User, Tote, ToteItem, TotePhoto, Role enum
-  seed.ts
-uploads/                            # Host-side photo storage (volume-mounted into container)
+  todos/TodoFormDialog.tsx, TodoList.tsx, todoUtils.ts
+  totes/ToteCard.tsx, ToteForm.tsx, LabelView.tsx, TotePhotoManager.tsx
+  grocery/GroceryListView.tsx       # Single list view (no modes)
+  grocery/GroceryItemHistory.tsx    # Item history catalog client
+  grocery/GrocerySettingsClient.tsx
+  grocery/AddItemDialog.tsx
+  grocery/GroceryActionsContext.tsx # Context for Complete Trip → SideNav
+  grocery/groceryUtils.ts
+lib/prisma.ts, lib/auth.ts
+proxy.ts                            # Next.js middleware (renamed from middleware.ts)
+prisma/schema.prisma
+next.config.ts                      # standalone + /uploads rewrite + NEXT_PUBLIC_APP_VERSION
 ```
 
 ## Deployment
 
-Docker Compose with a single app container. **Postgres is external** (remote managed server — not in compose).
+Docker Compose, single app container. Postgres is external.
 
-```yaml
-# compose.yaml (sketch)
-services:
-  homestack:
-    build: .
-    ports:
-      - "3000:3000"
-    environment:
-      DATABASE_URL: ...
-      NEXTAUTH_SECRET: ...
-      NEXTAUTH_URL: ...
-    restart: unless-stopped
+```bash
+# On server:
+git pull origin main
+docker compose up -d --build
+# entrypoint.sh runs: npx prisma db push && node server.js
+# Photos persist via ./uploads:/app/public/uploads volume
 ```
-
-Traefik handles TLS termination and routing externally.
 
 ### Environment Variables
 
 | Variable | Description |
 |---|---|
-| `DATABASE_URL` | Postgres connection string (remote server) |
-| `NEXTAUTH_SECRET` | Required — random secret for NextAuth JWT signing |
-| `NEXTAUTH_URL` | Public URL of the app (e.g. `https://homestack.deckerzoo.com`) |
-| `PORT` | Host port to bind (default 3000). Container always listens on 3000 internally. |
+| `DATABASE_URL` | Postgres connection string |
+| `NEXTAUTH_SECRET` | Random secret for JWT signing |
+| `NEXTAUTH_URL` | Public URL (e.g. `https://homestack.deckerzoo.com`) |
+| `PORT` | Host port (default 3000 internally, mapped via compose) |
+| `PUID` / `PGID` | File ownership for uploads (set to match host user) |
 
-### Deploy updates
+## Gotchas
 
-```bash
-git pull origin main
-docker compose up -d --build
-# Schema changes (prisma db push) run automatically on container startup
-# Photos persist via ./uploads volume mount
-```
+- **Prisma v5** — pinned because server has Node 20.18.1 (v7 requires 20.19+)
+- **`proxy.ts` not `middleware.ts`** — Next.js 16 renamed middleware
+- **Tailwind v4**: `@apply dark` invalid — dark class set on `<html>` in layout.tsx
+- **`useSearchParams()` needs Suspense** — login page split into page.tsx + LoginForm.tsx
+- **Next.js standalone doesn't serve `public/`** — uploaded files served via `/api/uploads/[...path]`, rewritten from `/uploads/*` in next.config.ts
+- **`list-item` class name** — Tailwind treats it as `display: list-item`, adds browser bullet point. Use `grocery-row` or similar instead.
+- **Nav hover** — NavLink uses inline `style` for active state; hover rules in globals.css require `!important` to override
 
 ## Session Management
 
@@ -223,7 +338,8 @@ At the end of every work session, run `/savesession` to update memory, commit al
 
 ## Future Suite Context
 
-HomeStack is designed to be the first module in a self-hosted home management platform. When adding future modules (e.g. pantry tracking, home inventory), reuse:
-- The `User`/`Role` auth model and NextAuth config from this project
+HomeStack is the first module in a self-hosted home management platform. When adding future modules, reuse:
+- The `User`/`Role` auth model and NextAuth config
 - The shared design system (colors, shadows, CSS classes, Poppins font)
 - The Docker Compose deployment pattern with external Postgres
+- The `GroceryActionsContext` pattern for wiring page-level actions into SideNav
