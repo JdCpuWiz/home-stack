@@ -51,8 +51,11 @@ TZ=America/New_York
 # Ollama — used by the Recipes "Scan" feature (parse recipe from text or photo)
 # Point to your Ollama instance. Omit to use the default: http://localhost:11434
 OLLAMA_URL="http://192.168.1.100:11434"
-# Any model you have pulled. llava or llava:13b recommended (multimodal, needed for photo scan).
-OLLAMA_MODEL="llava"
+# Recommended models (must be multimodal for photo scan):
+#   qwen2.5vl:7b         — best choice: reliable JSON output, fast, good vision quality
+#   llama3.2-vision:11b  — good alternative, slightly less consistent JSON formatting
+#   llava / llava:13b    — works but older; qwen2.5vl:7b is preferred
+OLLAMA_MODEL="qwen2.5vl:7b"
 ```
 
 > **Ollama is optional.** If `OLLAMA_URL` is not set the Scan feature will attempt `http://localhost:11434`. If Ollama is unreachable the scan button will return an error, but the rest of the app works normally.
@@ -149,4 +152,5 @@ Usually a missing or malformed `DATABASE_URL` or `NEXTAUTH_SECRET`.
 - Verify `OLLAMA_URL` is set and reachable from the Docker container: `docker compose exec homestack wget -qO- http://<ollama-host>:11434/api/tags`
 - Ollama must be accessible from the container's network — if Ollama runs on the Docker host, use `http://host.docker.internal:11434` (Linux: add `extra_hosts: ["host.docker.internal:host-gateway"]` to `compose.yaml`) or the host's LAN IP
 - Confirm the model is pulled: run `ollama list` on the Ollama host and check the value matches `OLLAMA_MODEL`
-- For photo scanning, the model must be multimodal (e.g. `llava`, `llava:13b`); text-only models will fail on image input
+- For photo scanning, the model must be multimodal; text-only models will fail on image input
+- Recommended models: `qwen2.5vl:7b` (best overall), `llama3.2-vision:11b` (good alternative). Avoid text-only models like `llama3.2:3b`
