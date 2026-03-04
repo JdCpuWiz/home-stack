@@ -326,6 +326,12 @@ export default function RecipeForm({ recipe }: Props) {
         <label className="block text-sm font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-primary)" }}>
           Ingredients
         </label>
+        <div className="flex gap-2 items-center mb-1">
+          <span className="w-20 text-xs font-medium" style={{ color: "var(--text-secondary)" }}>Qty</span>
+          <span className="w-20 text-xs font-medium" style={{ color: "var(--text-secondary)" }}>Unit</span>
+          <span className="flex-1 text-xs font-medium" style={{ color: "var(--text-secondary)" }}>Ingredient</span>
+          <span className="shrink-0 w-7" />
+        </div>
         <div className="flex flex-col gap-2">
           {ingredients.map((ing, idx) => (
             <div key={idx} className="flex gap-2 items-center">

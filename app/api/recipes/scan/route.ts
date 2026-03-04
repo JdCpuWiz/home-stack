@@ -5,7 +5,14 @@ import { authOptions } from "@/lib/auth";
 const OLLAMA_URL = process.env.OLLAMA_URL ?? "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "llava";
 
-const RECIPE_PROMPT = `Parse this recipe and return ONLY valid JSON with this exact structure, no markdown fences, no extra text:
+const RECIPE_PROMPT = `Parse this recipe and return ONLY valid JSON with this exact structure. No markdown fences, no explanation, no extra text — JSON only.
+
+Rules for ingredients:
+- "quantity" is the numeric amount only (e.g. "2", "1/2", "3-4"). null if not specified.
+- "unit" is the unit of measure only (e.g. "cups", "tbsp", "lbs", "oz", "cloves"). null if not specified.
+- "name" is the full ingredient description (everything else, e.g. "frozen hash browns", "sharp cheddar cheese, shredded", "large eggs").
+- Never split the ingredient name across quantity/unit/name. If there is no quantity or unit, put the entire ingredient in "name" and set quantity and unit to null.
+
 {
   "title": "string",
   "servings": "string or null",
