@@ -13,5 +13,6 @@ services:
       TZ: ${TZ:-UTC}
       OLLAMA_URL: ${OLLAMA_URL:-http://localhost:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llava}
+      HOMESTACK_API_KEY: ${HOMESTACK_API_KEY:-}
     volumes:
       - ./uploads:/app/public/uploads

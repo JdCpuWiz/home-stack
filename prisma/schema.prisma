@@ -131,6 +131,37 @@ model GroceryTripItem {
   purchased Boolean
 }
 
+// ─── Packages ─────────────────────────────────────────────────────
+enum Carrier {
+  USPS
+  UPS
+  FEDEX
+}
+
+enum PackageStatus {
+  UNKNOWN
+  PENDING
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  EXCEPTION
+}
+
+model Package {
+  id                Int           @id @default(autoincrement())
+  trackingNumber    String        @unique
+  carrier           Carrier
+  description       String?
+  status            PackageStatus @default(UNKNOWN)
+  statusDetail      String?
+  estimatedDelivery DateTime?
+  delivered         Boolean       @default(false)
+  sourceEmail       String?
+  events            Json?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
 // ─── Recipes ──────────────────────────────────────────────────────
 model Recipe {
   id          Int                @id @default(autoincrement())
