@@ -13,6 +13,9 @@ export type PackageItem = {
   estimatedDelivery: string | null;
   delivered: boolean;
   sourceEmail: string | null;
+  shipperName: string | null;
+  originCity: string | null;
+  originState: string | null;
   trackingUrl: string;
   createdAt: string;
   updatedAt: string;
@@ -294,6 +297,11 @@ function PackageCard({
         {pkg.statusDetail && (
           <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>
             {pkg.statusDetail}
+          </p>
+        )}
+        {(pkg.shipperName || pkg.originCity) && (
+          <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>
+            From{pkg.shipperName ? ` ${pkg.shipperName}` : ""}{pkg.originCity ? ` · ${pkg.originCity}${pkg.originState ? `, ${pkg.originState}` : ""}` : ""}
           </p>
         )}
       </div>

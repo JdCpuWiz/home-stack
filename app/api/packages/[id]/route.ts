@@ -24,7 +24,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   }
 
   const body = await request.json();
-  const { carrier, description, status, statusDetail, estimatedDelivery, delivered, events } =
+  const { carrier, description, status, statusDetail, estimatedDelivery, delivered, events, shipperName, originCity, originState } =
     body as {
       carrier?: string;
       description?: string;
@@ -33,6 +33,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       estimatedDelivery?: string | null;
       delivered?: boolean;
       events?: unknown;
+      shipperName?: string | null;
+      originCity?: string | null;
+      originState?: string | null;
     };
 
   const data: Record<string, unknown> = {};
@@ -57,6 +60,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   }
   if (delivered !== undefined) data.delivered = Boolean(delivered);
   if (events !== undefined) data.events = events;
+  if (shipperName !== undefined) data.shipperName = shipperName?.trim().slice(0, 200) || null;
+  if (originCity !== undefined) data.originCity = originCity?.trim().slice(0, 100) || null;
+  if (originState !== undefined) data.originState = originState?.trim().slice(0, 50) || null;
 
   const pkg = await prisma.package.update({
     where: { id: pkgId },

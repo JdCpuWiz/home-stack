@@ -157,6 +157,9 @@ model Package {
   estimatedDelivery DateTime?
   delivered         Boolean       @default(false)
   sourceEmail       String?
+  shipperName       String?
+  originCity        String?
+  originState       String?
   events            Json?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
