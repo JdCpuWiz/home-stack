@@ -3,7 +3,7 @@ import { isAuthorized } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 import { Carrier, PackageStatus } from "@prisma/client";
 
-const VALID_CARRIERS = new Set<string>(["USPS", "UPS", "FEDEX"]);
+const VALID_CARRIERS = new Set<string>(["USPS", "UPS"]);
 const VALID_STATUSES = new Set<string>([
   "UNKNOWN", "PENDING", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED", "EXCEPTION",
 ]);
@@ -14,8 +14,6 @@ export function trackingUrl(carrier: string, trackingNumber: string): string {
       return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${trackingNumber}`;
     case "UPS":
       return `https://www.ups.com/track?tracknum=${trackingNumber}`;
-    case "FEDEX":
-      return `https://www.fedex.com/fedextrack/?trknbr=${trackingNumber}`;
     default:
       return "";
   }
@@ -75,7 +73,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "trackingNumber is required" }, { status: 400 });
   }
   if (!carrier || !VALID_CARRIERS.has(carrier)) {
-    return NextResponse.json({ error: "carrier must be USPS, UPS, or FEDEX" }, { status: 400 });
+    return NextResponse.json({ error: "carrier must be USPS or UPS" }, { status: 400 });
   }
 
   const tracking = trackingNumber.trim().toUpperCase().replace(/\s+/g, "");

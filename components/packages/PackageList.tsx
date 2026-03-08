@@ -6,7 +6,7 @@ import { ExternalLink, Truck, CheckCircle, Trash2, Plus, X } from "lucide-react"
 export type PackageItem = {
   id: number;
   trackingNumber: string;
-  carrier: "USPS" | "UPS" | "FEDEX";
+  carrier: "USPS" | "UPS";
   description: string | null;
   status: string;
   statusDetail: string | null;
@@ -21,7 +21,6 @@ export type PackageItem = {
 const CARRIER_STYLE: Record<string, { label: string; bg: string; color: string; border: string }> = {
   USPS: { label: "USPS", bg: "#1a1a3e", color: "#6b9fff", border: "#2a2a5e" },
   UPS: { label: "UPS", bg: "#3e2800", color: "#ffb500", border: "#5e3c00" },
-  FEDEX: { label: "FedEx", bg: "#2a1a3e", color: "#cc99ff", border: "#3e2a5e" },
 };
 
 const STATUS_STYLE: Record<string, { label: string; color: string }> = {
@@ -56,7 +55,7 @@ function formatEta(dateStr: string | null): string | null {
 
 type AddFormState = {
   trackingNumber: string;
-  carrier: "USPS" | "UPS" | "FEDEX";
+  carrier: "USPS" | "UPS";
   description: string;
 };
 
@@ -137,7 +136,6 @@ export default function PackageList({ initialPackages }: { initialPackages: Pack
             >
               <option value="UPS">UPS</option>
               <option value="USPS">USPS</option>
-              <option value="FEDEX">FedEx</option>
             </select>
             <input
               className="input flex-1"
