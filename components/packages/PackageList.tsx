@@ -59,15 +59,27 @@ type AddFormState = {
   description: string;
 };
 
+const STATUS_GROUPS: { key: string; label: string; statuses: string[] }[] = [
+  { key: "out_for_delivery", label: "Out for Delivery", statuses: ["OUT_FOR_DELIVERY"] },
+  { key: "on_the_way",       label: "On the Way",       statuses: ["IN_TRANSIT"] },
+  { key: "pending",          label: "Pending",           statuses: ["PENDING", "UNKNOWN"] },
+  { key: "exception",        label: "Exception",         statuses: ["EXCEPTION"] },
+];
+
 export default function PackageList({ initialPackages }: { initialPackages: PackageItem[] }) {
   const [packages, setPackages] = useState<PackageItem[]>(initialPackages);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<AddFormState>({ trackingNumber: "", carrier: "UPS", description: "" });
   const [submitting, setSubmitting] = useState(false);
   const [showDelivered, setShowDelivered] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   const active = packages.filter((p) => !p.delivered);
   const delivered = packages.filter((p) => p.delivered);
+
+  function toggleGroup(key: string) {
+    setCollapsedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -162,22 +174,42 @@ export default function PackageList({ initialPackages }: { initialPackages: Pack
         </form>
       )}
 
-      {/* Active packages */}
+      {/* Active packages grouped by status */}
       {active.length === 0 ? (
         <div className="card text-center py-12">
           <Truck size={32} style={{ color: "var(--text-secondary)", margin: "0 auto 0.75rem" }} />
           <p style={{ color: "var(--text-secondary)" }}>No pending packages.</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3 mb-6">
-          {active.map((pkg) => (
-            <PackageCard
-              key={pkg.id}
-              pkg={pkg}
-              onMarkDelivered={handleMarkDelivered}
-              onDelete={handleDelete}
-            />
-          ))}
+        <div className="flex flex-col gap-6 mb-6">
+          {STATUS_GROUPS.map(({ key, label, statuses }) => {
+            const group = active.filter((p) => statuses.includes(p.status));
+            if (group.length === 0) return null;
+            const collapsed = collapsedGroups[key] ?? false;
+            return (
+              <div key={key}>
+                <button
+                  className="text-xs font-semibold uppercase tracking-widest mb-3 flex items-center gap-1"
+                  style={{ color: "var(--text-secondary)", background: "none", border: "none", cursor: "pointer" }}
+                  onClick={() => toggleGroup(key)}
+                >
+                  {collapsed ? "▸" : "▾"} {label} ({group.length})
+                </button>
+                {!collapsed && (
+                  <div className="flex flex-col gap-3">
+                    {group.map((pkg) => (
+                      <PackageCard
+                        key={pkg.id}
+                        pkg={pkg}
+                        onMarkDelivered={handleMarkDelivered}
+                        onDelete={handleDelete}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
