@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Package, CheckSquare, ShoppingCart, UtensilsCrossed } from "lucide-react";
+import { Package, CheckSquare, ShoppingCart, UtensilsCrossed, Truck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export default async function DashboardPage() {
   if (!session) redirect("/login");
 
   const now = new Date();
-  const [toteCount, todoCount, overdueCount, activeGroceryLists, recipeCount] = await Promise.all([
+  const [toteCount, todoCount, overdueCount, activeGroceryLists, recipeCount, activePackageCount, outForDeliveryCount] = await Promise.all([
     prisma.tote.count(),
     prisma.todoItem.count(),
     prisma.todoItem.count({ where: { dueDate: { lt: now } } }),
@@ -25,6 +25,8 @@ export default async function DashboardPage() {
       orderBy: { store: { position: "asc" } },
     }),
     prisma.recipe.count(),
+    prisma.package.count({ where: { delivered: false } }),
+    prisma.package.count({ where: { status: "OUT_FOR_DELIVERY" } }),
   ]);
 
   return (
@@ -113,6 +115,30 @@ export default async function DashboardPage() {
           </div>
           <Link href="/recipes" className="text-sm" style={{ color: "var(--text-secondary)" }}>
             All Recipes →
+          </Link>
+        </div>
+
+        {/* Packages */}
+        <div className="card flex flex-col gap-3">
+          <div className="flex items-center gap-2" style={{ color: "var(--accent-orange)" }}>
+            <Truck size={20} />
+            <span className="font-semibold">Packages</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-4xl font-bold" style={{ color: "var(--accent-orange)" }}>
+              {activePackageCount}
+            </span>
+            {outForDeliveryCount > 0 && (
+              <span
+                className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: "#14532d", color: "#86efac" }}
+              >
+                {outForDeliveryCount} out for delivery
+              </span>
+            )}
+          </div>
+          <Link href="/packages" className="text-sm" style={{ color: "var(--text-secondary)" }}>
+            All Packages →
           </Link>
         </div>
       </div>
