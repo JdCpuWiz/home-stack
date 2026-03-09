@@ -74,11 +74,11 @@ export default function PackageList({ initialPackages }: { initialPackages: Pack
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<AddFormState>({ trackingNumber: "", carrier: "UPS", description: "" });
   const [submitting, setSubmitting] = useState(false);
-  const [showDelivered, setShowDelivered] = useState(false);
+  const [showDelivered, setShowDelivered] = useState(true);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
-  const active = packages.filter((p) => !p.delivered);
-  const delivered = packages.filter((p) => p.delivered);
+  const active = packages.filter((p) => !p.delivered && p.status !== "DELIVERED");
+  const delivered = packages.filter((p) => p.delivered || p.status === "DELIVERED");
 
   function toggleGroup(key: string) {
     setCollapsedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
