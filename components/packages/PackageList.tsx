@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ExternalLink, Truck, CheckCircle, Trash2, Plus, X } from "lucide-react";
+import { Truck, PackageCheck, Trash2, Plus, X } from "lucide-react";
 
 export type PackageItem = {
   id: number;
@@ -259,17 +259,28 @@ function PackageCard({
   const etaToday = isToday(pkg.estimatedDelivery);
 
   return (
-    <div className="card-surface flex gap-3 items-start">
+    <div className="card-surface flex gap-3 items-start" style={{ position: "relative" }}>
+      {/* Whole-card tracking link */}
+      {pkg.trackingUrl && (
+        <a
+          href={pkg.trackingUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Track ${pkg.trackingNumber}`}
+          style={{ position: "absolute", inset: 0, zIndex: 0 }}
+        />
+      )}
+
       {/* Carrier badge */}
       <div
         className="shrink-0 text-xs font-bold px-2 py-0.5 rounded mt-0.5"
-        style={{ backgroundColor: carrier.bg, color: carrier.color, border: `1px solid ${carrier.border}` }}
+        style={{ position: "relative", zIndex: 1, backgroundColor: carrier.bg, color: carrier.color, border: `1px solid ${carrier.border}` }}
       >
         {carrier.label}
       </div>
 
       {/* Main info */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0" style={{ position: "relative", zIndex: 1 }}>
         <div className="flex items-center gap-2 flex-wrap">
           <span
             className="font-mono text-sm font-medium"
@@ -307,25 +318,14 @@ function PackageCard({
       </div>
 
       {/* Actions */}
-      <div className="flex gap-1 shrink-0">
-        {pkg.trackingUrl && (
-          <a
-            href={pkg.trackingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-secondary btn-sm"
-            title="Track on carrier site"
-          >
-            <ExternalLink size={13} />
-          </a>
-        )}
+      <div className="flex gap-1 shrink-0" style={{ position: "relative", zIndex: 1 }}>
         {!pkg.delivered && (
           <button
             className="btn-secondary btn-sm"
             title="Mark delivered"
             onClick={() => onMarkDelivered(pkg)}
           >
-            <CheckCircle size={13} />
+            <PackageCheck size={13} />
           </button>
         )}
         <button
