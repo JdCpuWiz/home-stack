@@ -38,6 +38,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       originState?: string | null;
     };
 
+  const existing = await prisma.package.findUnique({ where: { id: pkgId } });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const alreadyDelivered = existing.delivered;
   const data: Record<string, unknown> = {};
 
   if (carrier !== undefined) {
@@ -51,14 +55,18 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (!VALID_STATUSES.has(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
-    data.status = status as PackageStatus;
-    if (status === "DELIVERED") data.delivered = true;
+    // Never downgrade status away from DELIVERED once set
+    if (!alreadyDelivered) {
+      data.status = status as PackageStatus;
+      if (status === "DELIVERED") data.delivered = true;
+    }
   }
   if (statusDetail !== undefined) data.statusDetail = statusDetail?.trim().slice(0, 500) || null;
   if (estimatedDelivery !== undefined) {
     data.estimatedDelivery = estimatedDelivery ? new Date(estimatedDelivery) : null;
   }
-  if (delivered !== undefined) data.delivered = Boolean(delivered);
+  // Never reset delivered back to false once true
+  if (delivered !== undefined && !alreadyDelivered) data.delivered = Boolean(delivered);
   if (events !== undefined) data.events = events;
   if (shipperName !== undefined) data.shipperName = shipperName?.trim().slice(0, 200) || null;
   if (originCity !== undefined) data.originCity = originCity?.trim().slice(0, 100) || null;
