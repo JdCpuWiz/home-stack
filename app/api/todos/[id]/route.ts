@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { isAuthorized } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 
 type Params = { params: Promise<{ id: string }> };
 
 // PUT /api/todos/[id] — update (protected)
 export async function PUT(request: NextRequest, { params }: Params) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!(await isAuthorized(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -46,9 +44,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
 }
 
 // DELETE /api/todos/[id] — protected (used for checkbox complete + manual delete)
-export async function DELETE(_req: NextRequest, { params }: Params) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
+export async function DELETE(request: NextRequest, { params }: Params) {
+  if (!(await isAuthorized(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

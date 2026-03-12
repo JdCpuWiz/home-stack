@@ -1,20 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { isAuthorized } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 
 // DELETE /api/todos — delete all todos (protected)
-export async function DELETE() {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function DELETE(request: NextRequest) {
+  if (!(await isAuthorized(request))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   await prisma.todoItem.deleteMany();
   return NextResponse.json({ ok: true });
 }
 
 // GET /api/todos — list all todos (protected)
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) {
+export async function GET(request: NextRequest) {
+  if (!(await isAuthorized(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -27,8 +24,7 @@ export async function GET() {
 
 // POST /api/todos — create todo (protected)
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!(await isAuthorized(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
