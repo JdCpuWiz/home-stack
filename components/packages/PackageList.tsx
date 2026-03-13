@@ -53,6 +53,20 @@ function formatEta(dateStr: string | null): string | null {
   const diffDays = Math.round((d.getTime() - now.getTime()) / 86400000);
   if (isToday(dateStr)) return "Today";
   if (diffDays === 1) return "Tomorrow";
+  return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+}
+
+function formatUpdated(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffMins < 2) return "just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return "yesterday";
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
@@ -257,6 +271,7 @@ function PackageCard({
   const status = STATUS_STYLE[pkg.status] ?? STATUS_STYLE.UNKNOWN;
   const etaLabel = formatEta(pkg.estimatedDelivery);
   const etaToday = isToday(pkg.estimatedDelivery);
+  const updatedLabel = formatUpdated(pkg.updatedAt);
 
   return (
     <div className="card-surface flex gap-3 items-start" style={{ position: "relative" }}>
@@ -281,40 +296,60 @@ function PackageCard({
 
       {/* Main info */}
       <div className="flex-1 min-w-0" style={{ position: "relative", zIndex: 1 }}>
+        {/* Row 1: tracking number + status */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span
-            className="font-mono text-sm font-medium"
-            style={{ color: "var(--text-primary)" }}
-          >
+          <span className="font-mono text-sm font-medium" style={{ color: "var(--text-primary)" }}>
             {pkg.trackingNumber}
           </span>
-          <span className="text-xs font-medium" style={{ color: status.color }}>
+          <span className="text-xs font-semibold" style={{ color: status.color }}>
             {status.label}
           </span>
-          {etaLabel && (
-            <span
-              className="text-xs"
-              style={{ color: etaToday ? "var(--accent-orange)" : "var(--text-secondary)" }}
-            >
-              {etaToday ? "⚡ " : ""}{etaLabel}
-            </span>
-          )}
         </div>
+
+        {/* Description */}
         {pkg.description && (
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-secondary)" }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--text-primary)" }}>
             {pkg.description}
           </p>
         )}
-        {pkg.statusDetail && (
-          <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>
-            {pkg.statusDetail}
-          </p>
-        )}
-        {(pkg.shipperName || pkg.originCity) && (
-          <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>
-            From{pkg.shipperName ? ` ${pkg.shipperName}` : ""}{pkg.originCity ? ` · ${pkg.originCity}${pkg.originState ? `, ${pkg.originState}` : ""}` : ""}
-          </p>
-        )}
+
+        {/* Detail rows */}
+        <div className="flex flex-col gap-0.5 mt-1.5">
+          {/* Expected delivery */}
+          {etaLabel && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span style={{ color: "var(--text-secondary)" }}>Expected:</span>
+              <span
+                className="font-semibold"
+                style={{ color: etaToday ? "var(--accent-orange)" : "var(--text-primary)" }}
+              >
+                {etaToday ? "⚡ Today" : etaLabel}
+              </span>
+            </div>
+          )}
+
+          {/* Current location / status detail */}
+          {pkg.statusDetail && (
+            <div className="flex items-start gap-1.5 text-xs">
+              <span style={{ color: "var(--text-secondary)" }}>Location:</span>
+              <span style={{ color: "var(--text-primary)" }}>{pkg.statusDetail}</span>
+            </div>
+          )}
+
+          {/* Sender / shipper */}
+          {pkg.shipperName && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span style={{ color: "var(--text-secondary)" }}>From:</span>
+              <span style={{ color: "var(--text-primary)" }}>{pkg.shipperName}</span>
+            </div>
+          )}
+
+          {/* Last updated */}
+          <div className="flex items-center gap-1.5 text-xs mt-0.5">
+            <span style={{ color: "var(--text-secondary)" }}>Updated:</span>
+            <span style={{ color: "var(--text-secondary)" }}>{updatedLabel}</span>
+          </div>
+        </div>
       </div>
 
       {/* Actions */}
