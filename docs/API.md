@@ -415,6 +415,110 @@ Response: `{ "ok": true }`
 
 ---
 
+## Packages
+
+Packages are tracked shipments. Status is normally updated by an n8n workflow polling UPS/USPS APIs. `description` and `shipperName` are manually editable in the UI (inline edit, pencil icon on hover).
+
+### List packages
+```
+GET /api/packages
+Auth: required (session or Bearer)
+```
+Query params:
+- `all=true` — include delivered packages (default: active only)
+- `eta=today` — only packages with estimated delivery today
+
+Response: array of package objects.
+```json
+[
+  {
+    "id": 1,
+    "trackingNumber": "1Z999AA10123456784",
+    "carrier": "UPS",
+    "description": "Kitchen stand mixer",
+    "status": "IN_TRANSIT",
+    "statusDetail": "Louisville, KY - UPS Hub",
+    "estimatedDelivery": "2025-03-15T00:00:00.000Z",
+    "delivered": false,
+    "sourceEmail": "ship-confirm@amazon.com",
+    "shipperName": "Amazon",
+    "originCity": "Louisville",
+    "originState": "KY",
+    "trackingUrl": "https://www.ups.com/track?tracknum=1Z999AA10123456784",
+    "createdAt": "2025-03-12T10:00:00.000Z",
+    "updatedAt": "2025-03-13T08:30:00.000Z"
+  }
+]
+```
+
+### Create package (idempotent)
+```
+POST /api/packages
+Auth: required (session or Bearer)
+Content-Type: application/json
+```
+```json
+{
+  "trackingNumber": "1Z999AA10123456784",
+  "carrier": "UPS",
+  "sourceEmail": "ship-confirm@amazon.com"
+}
+```
+`carrier`: `"UPS"` | `"USPS"`
+`description`: optional — **do not** populate this from the email subject line; leave it blank so users can fill it in manually via the UI.
+`sourceEmail`: optional — the email address the tracking number was parsed from.
+
+If a package with the same `trackingNumber` already exists, returns the existing record (idempotent).
+
+Response `201`: created package. `200`: already existed.
+
+### Update package status
+```
+PATCH /api/packages/:id
+Auth: required (session or Bearer)
+Content-Type: application/json
+```
+Used by n8n to push tracking updates. All fields optional — only provided fields are updated.
+```json
+{
+  "status": "IN_TRANSIT",
+  "statusDetail": "Louisville, KY - UPS Hub",
+  "estimatedDelivery": "2025-03-15T00:00:00.000Z",
+  "delivered": false,
+  "events": [...],
+  "shipperName": "Amazon",
+  "originCity": "Louisville",
+  "originState": "KY"
+}
+```
+`status`: `"UNKNOWN"` | `"PENDING"` | `"IN_TRANSIT"` | `"OUT_FOR_DELIVERY"` | `"DELIVERED"` | `"EXCEPTION"`
+
+**Guard rails** (enforced server-side):
+- Once `delivered = true` or `status = "DELIVERED"` is set, subsequent PATCHes will **never** reset it — prevents n8n re-runs from downgrading a delivered package.
+
+Response: updated package object.
+
+### Delete package
+```
+DELETE /api/packages/:id
+Auth: required (session or Bearer)
+```
+Response: `{ "ok": true }`
+
+### n8n — package_status_updater body reference
+
+**POST (create) node body** — do not include `description`:
+```
+{{ JSON.stringify({ trackingNumber: $json.trackingNumber, carrier: $json.carrier, sourceEmail: $json.sourceEmail }) }}
+```
+
+**PATCH (update) node body:**
+```
+{{ JSON.stringify({ status: $json.status, statusDetail: $json.statusDetail, estimatedDelivery: $json.estimatedDelivery, events: $json.events, delivered: $json.delivered, shipperName: $json.shipperName, originCity: $json.originCity, originState: $json.originState }) }}
+```
+
+---
+
 ## Email Digest
 
 All email digest endpoints accept either a valid session cookie **or** a Bearer token (`Authorization: Bearer <HOMESTACK_API_KEY>`), making them safe to call from n8n without a login flow.
@@ -556,3 +660,6 @@ Trigger: webhook with ingredient list → loop → POST each ingredient to `/api
 
 ### Daily email triage digest
 Trigger: schedule (e.g. daily at 6 AM) → query email provider API or Gmail → group messages by sender → POST to `/api/email-digest` with `entries` array. Use `Authorization: Bearer <HOMESTACK_API_KEY>` header to skip login flow. The endpoint is idempotent — re-running the workflow overwrites the day's digest.
+
+### Package status updater
+Trigger: schedule → GET active packages from `/api/packages` → split → call UPS/USPS tracking APIs → parse response → PATCH `/api/packages/:id` with status, statusDetail, estimatedDelivery, events, delivered, shipperName, originCity, originState. When creating new packages from email, POST only `trackingNumber`, `carrier`, and `sourceEmail` — omit `description` so users can label packages manually in the UI.
