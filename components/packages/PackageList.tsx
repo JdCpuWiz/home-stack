@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Truck, PackageCheck, Trash2, Plus, X } from "lucide-react";
+import { useState, useRef } from "react";
+import { Truck, PackageCheck, Trash2, Plus, X, Pencil, Check } from "lucide-react";
 
 export type PackageItem = {
   id: number;
@@ -23,16 +23,16 @@ export type PackageItem = {
 
 const CARRIER_STYLE: Record<string, { label: string; bg: string; color: string; border: string }> = {
   USPS: { label: "USPS", bg: "#1a1a3e", color: "#6b9fff", border: "#2a2a5e" },
-  UPS: { label: "UPS", bg: "#3e2800", color: "#ffb500", border: "#5e3c00" },
+  UPS:  { label: "UPS",  bg: "#3e2800", color: "#ffb500", border: "#5e3c00" },
 };
 
 const STATUS_STYLE: Record<string, { label: string; color: string }> = {
-  UNKNOWN:          { label: "Unknown",           color: "var(--text-secondary)" },
-  PENDING:          { label: "Pending",            color: "var(--text-secondary)" },
-  IN_TRANSIT:       { label: "In Transit",         color: "#6b9fff" },
-  OUT_FOR_DELIVERY: { label: "Out for Delivery",   color: "var(--accent-orange)" },
-  DELIVERED:        { label: "Delivered",          color: "#4ade80" },
-  EXCEPTION:        { label: "Exception",          color: "#f87171" },
+  UNKNOWN:          { label: "Unknown",          color: "var(--text-secondary)" },
+  PENDING:          { label: "Pending",           color: "var(--text-secondary)" },
+  IN_TRANSIT:       { label: "In Transit",        color: "#6b9fff" },
+  OUT_FOR_DELIVERY: { label: "Out for Delivery",  color: "var(--accent-orange)" },
+  DELIVERED:        { label: "Delivered",         color: "#4ade80" },
+  EXCEPTION:        { label: "Exception",         color: "#f87171" },
 };
 
 function isToday(dateStr: string | null): boolean {
@@ -49,17 +49,14 @@ function isToday(dateStr: string | null): boolean {
 function formatEta(dateStr: string | null): string | null {
   if (!dateStr) return null;
   const d = new Date(dateStr);
-  const now = new Date();
-  const diffDays = Math.round((d.getTime() - now.getTime()) / 86400000);
+  const diffDays = Math.round((d.getTime() - new Date().getTime()) / 86400000);
   if (isToday(dateStr)) return "Today";
   if (diffDays === 1) return "Tomorrow";
   return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 }
 
 function formatUpdated(dateStr: string): string {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
+  const diffMs = new Date().getTime() - new Date(dateStr).getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
@@ -67,7 +64,7 @@ function formatUpdated(dateStr: string): string {
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays === 1) return "yesterday";
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return new Date(dateStr).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 type AddFormState = {
@@ -79,8 +76,8 @@ type AddFormState = {
 const STATUS_GROUPS: { key: string; label: string; statuses: string[] }[] = [
   { key: "out_for_delivery", label: "Out for Delivery", statuses: ["OUT_FOR_DELIVERY"] },
   { key: "on_the_way",       label: "On the Way",       statuses: ["IN_TRANSIT"] },
-  { key: "pending",          label: "Pending",           statuses: ["PENDING", "UNKNOWN"] },
-  { key: "exception",        label: "Exception",         statuses: ["EXCEPTION"] },
+  { key: "pending",          label: "Pending",          statuses: ["PENDING", "UNKNOWN"] },
+  { key: "exception",        label: "Exception",        statuses: ["EXCEPTION"] },
 ];
 
 export default function PackageList({ initialPackages }: { initialPackages: PackageItem[] }) {
@@ -96,6 +93,10 @@ export default function PackageList({ initialPackages }: { initialPackages: Pack
 
   function toggleGroup(key: string) {
     setCollapsedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  function handleUpdate(updated: PackageItem) {
+    setPackages((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
   }
 
   async function handleAdd(e: React.FormEvent) {
@@ -151,11 +152,7 @@ export default function PackageList({ initialPackages }: { initialPackages: Pack
 
       {/* Add form */}
       {showAdd && (
-        <form
-          onSubmit={handleAdd}
-          className="card mb-6 flex flex-col gap-3"
-          style={{ padding: "1rem" }}
-        >
+        <form onSubmit={handleAdd} className="card mb-6 flex flex-col gap-3" style={{ padding: "1rem" }}>
           <div className="flex gap-2 flex-wrap">
             <select
               value={form.carrier}
@@ -220,6 +217,7 @@ export default function PackageList({ initialPackages }: { initialPackages: Pack
                         pkg={pkg}
                         onMarkDelivered={handleMarkDelivered}
                         onDelete={handleDelete}
+                        onUpdate={handleUpdate}
                       />
                     ))}
                   </div>
@@ -248,6 +246,7 @@ export default function PackageList({ initialPackages }: { initialPackages: Pack
                   pkg={pkg}
                   onMarkDelivered={handleMarkDelivered}
                   onDelete={handleDelete}
+                  onUpdate={handleUpdate}
                 />
               ))}
             </div>
@@ -258,20 +257,131 @@ export default function PackageList({ initialPackages }: { initialPackages: Pack
   );
 }
 
+/** Inline editable text field — shows value + pencil icon; click pencil to edit */
+function InlineEdit({
+  label,
+  value,
+  placeholder,
+  onSave,
+}: {
+  label: string;
+  value: string | null;
+  placeholder: string;
+  onSave: (val: string | null) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value ?? "");
+  const [saving, setSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function startEdit(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDraft(value ?? "");
+    setEditing(true);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }
+
+  async function save(e?: React.MouseEvent | React.KeyboardEvent) {
+    e?.preventDefault();
+    e?.stopPropagation();
+    setSaving(true);
+    await onSave(draft.trim() || null);
+    setSaving(false);
+    setEditing(false);
+  }
+
+  function cancel(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditing(false);
+  }
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") save(e);
+    if (e.key === "Escape") { e.preventDefault(); setEditing(false); }
+  }
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+        <span style={{ color: "var(--text-secondary)", flexShrink: 0 }}>{label}</span>
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={placeholder}
+          className="input"
+          style={{ fontSize: "0.75rem", padding: "0.125rem 0.375rem", height: "auto", minWidth: 0, flex: 1, maxWidth: "180px" }}
+        />
+        <button
+          onClick={save}
+          disabled={saving}
+          title="Save"
+          style={{ background: "none", border: "none", cursor: "pointer", color: "#4ade80", padding: "2px", flexShrink: 0 }}
+        >
+          <Check size={13} />
+        </button>
+        <button
+          onClick={cancel}
+          title="Cancel"
+          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", padding: "2px", flexShrink: 0 }}
+        >
+          <X size={13} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 text-xs group/edit">
+      <span style={{ color: "var(--text-secondary)", flexShrink: 0 }}>{label}</span>
+      {value ? (
+        <span style={{ color: "var(--text-primary)" }}>{value}</span>
+      ) : (
+        <span style={{ color: "var(--text-secondary)", fontStyle: "italic" }}>{placeholder}</span>
+      )}
+      <button
+        onClick={startEdit}
+        title={`Edit ${label.toLowerCase().replace(":", "")}`}
+        className="opacity-0 group-hover/edit:opacity-100"
+        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", padding: "2px", flexShrink: 0, transition: "opacity 0.15s" }}
+      >
+        <Pencil size={10} />
+      </button>
+    </div>
+  );
+}
+
 function PackageCard({
   pkg,
   onMarkDelivered,
   onDelete,
+  onUpdate,
 }: {
   pkg: PackageItem;
   onMarkDelivered: (p: PackageItem) => void;
   onDelete: (p: PackageItem) => void;
+  onUpdate: (p: PackageItem) => void;
 }) {
   const carrier = CARRIER_STYLE[pkg.carrier] ?? CARRIER_STYLE.UPS;
   const status = STATUS_STYLE[pkg.status] ?? STATUS_STYLE.UNKNOWN;
   const etaLabel = formatEta(pkg.estimatedDelivery);
   const etaToday = isToday(pkg.estimatedDelivery);
   const updatedLabel = formatUpdated(pkg.updatedAt);
+
+  async function patchField(fields: Partial<Pick<PackageItem, "shipperName" | "description">>) {
+    const res = await fetch(`/api/packages/${pkg.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(fields),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      onUpdate({ ...pkg, ...updated });
+    }
+  }
 
   return (
     <div className="card-surface flex gap-3 items-start" style={{ position: "relative" }}>
@@ -296,7 +406,7 @@ function PackageCard({
 
       {/* Main info */}
       <div className="flex-1 min-w-0" style={{ position: "relative", zIndex: 1 }}>
-        {/* Row 1: tracking number + status */}
+        {/* Tracking number + status */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-mono text-sm font-medium" style={{ color: "var(--text-primary)" }}>
             {pkg.trackingNumber}
@@ -306,46 +416,43 @@ function PackageCard({
           </span>
         </div>
 
-        {/* Description */}
-        {pkg.description && (
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-primary)" }}>
-            {pkg.description}
-          </p>
-        )}
+        {/* Editable description */}
+        <div className="mt-1" style={{ position: "relative", zIndex: 1 }}>
+          <InlineEdit
+            label="Description:"
+            value={pkg.description}
+            placeholder="add description"
+            onSave={(val) => patchField({ description: val })}
+          />
+        </div>
 
         {/* Detail rows */}
-        <div className="flex flex-col gap-0.5 mt-1.5">
-          {/* Expected delivery */}
+        <div className="flex flex-col gap-0.5 mt-1">
           {etaLabel && (
             <div className="flex items-center gap-1.5 text-xs">
               <span style={{ color: "var(--text-secondary)" }}>Expected:</span>
-              <span
-                className="font-semibold"
-                style={{ color: etaToday ? "var(--accent-orange)" : "var(--text-primary)" }}
-              >
+              <span className="font-semibold" style={{ color: etaToday ? "var(--accent-orange)" : "var(--text-primary)" }}>
                 {etaToday ? "⚡ Today" : etaLabel}
               </span>
             </div>
           )}
 
-          {/* Current location / status detail */}
           {pkg.statusDetail && (
             <div className="flex items-start gap-1.5 text-xs">
-              <span style={{ color: "var(--text-secondary)" }}>Location:</span>
+              <span style={{ color: "var(--text-secondary)", flexShrink: 0 }}>Location:</span>
               <span style={{ color: "var(--text-primary)" }}>{pkg.statusDetail}</span>
             </div>
           )}
 
-          {/* Sender / shipper */}
-          {pkg.shipperName && (
-            <div className="flex items-center gap-1.5 text-xs">
-              <span style={{ color: "var(--text-secondary)" }}>From:</span>
-              <span style={{ color: "var(--text-primary)" }}>{pkg.shipperName}</span>
-            </div>
-          )}
+          {/* Editable sender */}
+          <InlineEdit
+            label="From:"
+            value={pkg.shipperName}
+            placeholder="add sender"
+            onSave={(val) => patchField({ shipperName: val })}
+          />
 
-          {/* Last updated */}
-          <div className="flex items-center gap-1.5 text-xs mt-0.5">
+          <div className="flex items-center gap-1.5 text-xs">
             <span style={{ color: "var(--text-secondary)" }}>Updated:</span>
             <span style={{ color: "var(--text-secondary)" }}>{updatedLabel}</span>
           </div>
@@ -355,19 +462,11 @@ function PackageCard({
       {/* Actions */}
       <div className="flex gap-1 shrink-0" style={{ position: "relative", zIndex: 1 }}>
         {!pkg.delivered && (
-          <button
-            className="btn-secondary btn-sm"
-            title="Mark delivered"
-            onClick={() => onMarkDelivered(pkg)}
-          >
+          <button className="btn-secondary btn-sm" title="Mark delivered" onClick={() => onMarkDelivered(pkg)}>
             <PackageCheck size={13} />
           </button>
         )}
-        <button
-          className="btn-danger btn-sm"
-          title="Remove"
-          onClick={() => onDelete(pkg)}
-        >
+        <button className="btn-danger btn-sm" title="Remove" onClick={() => onDelete(pkg)}>
           <Trash2 size={13} />
         </button>
       </div>
