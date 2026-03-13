@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Package, Plus, CheckSquare, Search, Users, X, ShoppingCart, History, Settings, CheckCheck, LogOut, LogIn, List, Trash2, UtensilsCrossed, LayoutDashboard, Truck } from "lucide-react";
+import { Package, Plus, CheckSquare, Search, Users, X, ShoppingCart, History, Settings, CheckCheck, LogOut, LogIn, List, Trash2, UtensilsCrossed, LayoutDashboard, Truck, Mail } from "lucide-react";
 import { useGroceryActions } from "@/components/grocery/GroceryActionsContext";
 
 type Props = {
@@ -231,6 +231,13 @@ export default function SideNav({ open, onClose }: Props) {
 
           {session && (
             <>
+              <SectionLabel label="Email" />
+              <NavLink href="/email-digest" label="Daily Digest" icon={<Mail size={15} />} onClick={onClose} />
+            </>
+          )}
+
+          {session && (
+            <>
               <SectionLabel label="Recipes" />
               <NavLink
                 href="/recipes"
@@ -309,6 +316,12 @@ export default function SideNav({ open, onClose }: Props) {
                 href="/settings/grocery"
                 label="Grocery Settings"
                 icon={<Settings size={15} />}
+                onClick={onClose}
+              />
+              <NavLink
+                href="/settings/email-digest"
+                label="Email Settings"
+                icon={<Mail size={15} />}
                 onClick={onClose}
               />
             </>

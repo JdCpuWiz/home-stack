@@ -165,6 +165,23 @@ model Package {
   updatedAt         DateTime      @updatedAt
 }
 
+// ─── Email Digest ──────────────────────────────────────────────────
+model ApprovedSender {
+  id        Int      @id @default(autoincrement())
+  value     String   @unique   // e.g. "orders@amazon.com" or "@amazon.com"
+  label     String?            // optional display name, e.g. "Amazon"
+  createdAt DateTime @default(now())
+}
+
+model EmailDigest {
+  id         Int      @id @default(autoincrement())
+  reportDate DateTime @unique   // midnight UTC for the day
+  totalCount Int
+  entries    Json     // [{ sender: string, count: number }]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
 // ─── Recipes ──────────────────────────────────────────────────────
 model Recipe {
   id          Int                @id @default(autoincrement())

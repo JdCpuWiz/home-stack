@@ -415,6 +415,86 @@ Response: `{ "ok": true }`
 
 ---
 
+## Email Digest
+
+All email digest endpoints accept either a valid session cookie **or** a Bearer token (`Authorization: Bearer <HOMESTACK_API_KEY>`), making them safe to call from n8n without a login flow.
+
+### Get today's digest
+```
+GET /api/email-digest
+Auth: required (session or Bearer)
+```
+Returns today's digest object or `null` if none has been posted yet.
+```json
+{
+  "id": 1,
+  "reportDate": "2025-03-13T00:00:00.000Z",
+  "totalCount": 42,
+  "entries": [
+    { "sender": "orders@amazon.com", "count": 15 },
+    { "sender": "@paypal.com", "count": 8 }
+  ],
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+```
+
+### Upsert today's digest
+```
+POST /api/email-digest
+Auth: required (session or Bearer)
+Content-Type: application/json
+```
+Creates or updates the digest for today (midnight UTC). Automatically prunes digests older than 7 days.
+```json
+{
+  "entries": [
+    { "sender": "orders@amazon.com", "count": 15 },
+    { "sender": "@paypal.com", "count": 8 }
+  ]
+}
+```
+`entries`: non-empty array of `{ sender: string, count: number }` — totals are summed automatically.
+
+Response `200`: upserted digest object.
+
+### List approved senders
+```
+GET /api/email-digest/senders
+Auth: required (session or Bearer)
+```
+Response: array of approved sender objects.
+```json
+[
+  { "id": 1, "value": "orders@amazon.com", "label": "Amazon", "createdAt": "..." },
+  { "id": 2, "value": "@paypal.com", "label": null, "createdAt": "..." }
+]
+```
+
+### Create approved sender (admin only)
+```
+POST /api/email-digest/senders
+Auth: admin session
+Content-Type: application/json
+```
+```json
+{ "value": "orders@amazon.com", "label": "Amazon" }
+```
+`value`: exact email or domain wildcard (e.g. `@amazon.com`). Stored lowercased.
+`label`: optional display name.
+
+Response `201`: created sender.
+Response `409`: `{ "error": "Sender already exists" }`
+
+### Delete approved sender (admin only)
+```
+DELETE /api/email-digest/senders/:id
+Auth: admin session
+```
+Response: `{ "ok": true }` or `404` if not found.
+
+---
+
 ## Users (Admin only)
 
 ### List users
@@ -473,3 +553,6 @@ Trigger: schedule → GET `/api/grocery/lists?storeId=1` → if items exist and 
 
 ### Grocery list import from meal plan
 Trigger: webhook with ingredient list → loop → POST each ingredient to `/api/grocery/stores/:id/items` (409 responses are safe to ignore — item already there)
+
+### Daily email triage digest
+Trigger: schedule (e.g. daily at 6 AM) → query email provider API or Gmail → group messages by sender → POST to `/api/email-digest` with `entries` array. Use `Authorization: Bearer <HOMESTACK_API_KEY>` header to skip login flow. The endpoint is idempotent — re-running the workflow overwrites the day's digest.
