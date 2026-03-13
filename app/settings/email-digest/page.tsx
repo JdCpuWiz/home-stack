@@ -11,9 +11,10 @@ export default async function EmailDigestSettingsPage() {
   if (!session) redirect("/login");
   if ((session.user as { role: string }).role !== "ADMIN") redirect("/");
 
-  const senders = await prisma.approvedSender.findMany({
+  const raw = await prisma.approvedSender.findMany({
     orderBy: { createdAt: "asc" },
   });
+  const senders = raw.map((s) => ({ ...s, createdAt: s.createdAt.toISOString() }));
 
   return (
     <div>
