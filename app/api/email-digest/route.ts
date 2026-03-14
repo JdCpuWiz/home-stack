@@ -27,10 +27,29 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { entries } = body as { entries?: { sender: string; count: number }[] };
+  const { entries: rawEntries } = body as { entries?: { sender: string; count: number }[] };
 
-  if (!Array.isArray(entries) || entries.length === 0) {
+  if (!Array.isArray(rawEntries) || rawEntries.length === 0) {
     return NextResponse.json({ error: "entries must be a non-empty array" }, { status: 400 });
+  }
+
+  // Filter to approved senders only (if any are configured); apply label as display name
+  const approvedSenders = await prisma.approvedSender.findMany();
+  let entries: { sender: string; count: number }[];
+  if (approvedSenders.length > 0) {
+    entries = rawEntries
+      .filter((e) => (e.count ?? 0) > 0)
+      .flatMap((e) => {
+        const senderLower = e.sender.toLowerCase();
+        const match = approvedSenders.find((s) => {
+          const val = s.value.toLowerCase();
+          return senderLower === val || senderLower.endsWith("@" + val);
+        });
+        return match ? [{ sender: match.label || e.sender, count: e.count }] : [];
+      });
+  } else {
+    // No approved senders configured — store everything (unfiltered)
+    entries = rawEntries.filter((e) => (e.count ?? 0) > 0);
   }
 
   const totalCount = entries.reduce((sum, e) => sum + (e.count ?? 0), 0);
