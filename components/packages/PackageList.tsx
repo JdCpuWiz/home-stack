@@ -444,6 +444,15 @@ function PackageCard({
             </div>
           )}
 
+          {(pkg.originCity || pkg.originState) && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span style={{ color: "var(--text-secondary)" }}>Origin:</span>
+              <span style={{ color: "var(--text-primary)" }}>
+                {[pkg.originCity, pkg.originState].filter(Boolean).join(", ")}
+              </span>
+            </div>
+          )}
+
           {/* Editable sender */}
           <InlineEdit
             label="From:"
