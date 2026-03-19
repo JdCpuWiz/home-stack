@@ -68,15 +68,23 @@ export async function fetchTimesheetNetPay(
     const targetStartDate = `${year}-${paddedMonth}-15`;
     console.log(`[timesheetClient] fetching periods from ${timesheetUrl}/api/pay-periods, looking for start_date=${targetStartDate}`);
 
-    const periodsRes = await nodeGet(
-      `${timesheetUrl}/api/pay-periods`,
-      headers
-    ) as { success: boolean; data: Array<{ id: number; start_date: string }> };
+    const periodsRaw = await nodeGet(`${timesheetUrl}/api/pay-periods`, headers);
+    console.log("[timesheetClient] periodsRaw type:", typeof periodsRaw, "isArray:", Array.isArray(periodsRaw));
+    console.log("[timesheetClient] periodsRaw keys:", periodsRaw && typeof periodsRaw === "object" ? Object.keys(periodsRaw as object).join(",") : String(periodsRaw));
 
-    const periods = Array.isArray(periodsRes) ? periodsRes : periodsRes.data;
-    console.log(`[timesheetClient] got ${periods?.length} periods, first start_dates:`, periods?.slice(0, 3).map(p => p.start_date));
+    // Handle both bare array and { success, data: [] } envelope
+    const periods: Array<{ id: number; start_date: string }> = Array.isArray(periodsRaw)
+      ? (periodsRaw as Array<{ id: number; start_date: string }>)
+      : (periodsRaw as { data?: Array<{ id: number; start_date: string }> })?.data ?? [];
 
-    const period = periods?.find(
+    if (!Array.isArray(periods) || periods.length === 0) {
+      console.warn("[timesheetClient] periods is empty or not an array");
+      return null;
+    }
+
+    console.log(`[timesheetClient] got ${periods.length} periods, checking for ${targetStartDate}`);
+
+    const period = periods.find(
       (p) => p.start_date && p.start_date.substring(0, 10) === targetStartDate
     );
     if (!period) {
@@ -84,14 +92,13 @@ export async function fetchTimesheetNetPay(
       return null;
     }
 
-    const payRes = await nodeGet(
-      `${timesheetUrl}/api/pay-periods/${period.id}/pay`,
-      headers
-    ) as { success: boolean; data: { netPay?: number } } | { netPay?: number };
+    const payRaw = await nodeGet(`${timesheetUrl}/api/pay-periods/${period.id}/pay`, headers);
+    console.log("[timesheetClient] payRaw keys:", payRaw && typeof payRaw === "object" ? Object.keys(payRaw as object).join(",") : String(payRaw));
 
-    const payData = "data" in payRes ? payRes.data : payRes;
-    console.log(`[timesheetClient] netPay=${payData.netPay}`);
-    return typeof payData.netPay === "number" ? payData.netPay : null;
+    // Handle both bare PayCalculation and { success, data: PayCalculation } envelope
+    const payData = (payRaw as { data?: { netPay?: number } })?.data ?? (payRaw as { netPay?: number });
+    console.log(`[timesheetClient] netPay=${payData?.netPay}`);
+    return typeof payData?.netPay === "number" ? payData.netPay : null;
   } catch (err) {
     console.error("[timesheetClient] fetch error:", err);
     return null;
