@@ -272,20 +272,47 @@ export default function FinanceDashboard() {
 
   async function clearDefaults() {
     if (!confirm("Remove all budget item entries? Unplanned entries will be kept.")) return;
-    const res = await fetch(`/api/finance/months/${year}/${month}/clear-defaults`, { method: "POST" });
-    if (res.ok) setMonthData(await res.json());
+    try {
+      const res = await fetch(`/api/finance/months/${year}/${month}/clear-defaults`, { method: "POST" });
+      if (res.ok) {
+        setMonthData(await res.json());
+      } else {
+        const body = await res.json().catch(() => ({}));
+        alert(`Clear Defaults failed (${res.status}): ${body.error ?? "unknown error"}`);
+      }
+    } catch (e) {
+      alert(`Clear Defaults error: ${e}`);
+    }
   }
 
   async function loadDefaults() {
-    const res = await fetch(`/api/finance/months/${year}/${month}/load-defaults`, { method: "POST" });
-    if (res.ok) setMonthData(await res.json());
+    try {
+      const res = await fetch(`/api/finance/months/${year}/${month}/load-defaults`, { method: "POST" });
+      if (res.ok) {
+        setMonthData(await res.json());
+      } else {
+        const body = await res.json().catch(() => ({}));
+        alert(`Load Defaults failed (${res.status}): ${body.error ?? "unknown error"}`);
+      }
+    } catch (e) {
+      alert(`Load Defaults error: ${e}`);
+    }
   }
 
   async function toggleArchive() {
     const isArchived = !!monthData?.archivedAt;
     if (!isArchived && !confirm("Lock this month? You can unlock it later.")) return;
-    const res = await fetch(`/api/finance/months/${year}/${month}/archive`, { method: "POST" });
-    if (res.ok) setMonthData(await res.json());
+    try {
+      const res = await fetch(`/api/finance/months/${year}/${month}/archive`, { method: "POST" });
+      if (res.ok) {
+        setMonthData(await res.json());
+      } else {
+        const body = await res.json().catch(() => ({}));
+        alert(`Archive failed (${res.status}): ${body.error ?? "unknown error"}`);
+      }
+    } catch (e) {
+      alert(`Archive error: ${e}`);
+    }
   }
 
   // ─── Derived values ─────────────────────────────────────────────
