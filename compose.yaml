@@ -15,5 +15,6 @@ services:
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llava}
       HOMESTACK_API_KEY: ${HOMESTACK_API_KEY:-}
       TIMESHEET_URL: ${TIMESHEET_URL:-}
+      TIMESHEET_API_KEY: ${TIMESHEET_API_KEY:-}
     volumes:
       - ./uploads:/app/public/uploads

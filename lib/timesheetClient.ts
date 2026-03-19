@@ -18,9 +18,14 @@ export async function fetchTimesheetNetPay(
     const targetStartDate = `${year}-${paddedMonth}-15`;
     console.log(`[timesheetClient] fetching periods from ${timesheetUrl}/api/pay-periods, looking for start_date=${targetStartDate}`);
 
+    const headers: Record<string, string> = {};
+    const apiKey = process.env.TIMESHEET_API_KEY;
+    if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+
     const periodsRes = await fetch(`${timesheetUrl}/api/pay-periods`, {
       signal: AbortSignal.timeout(5000),
       cache: "no-store",
+      headers,
     });
     if (!periodsRes.ok) {
       console.warn(`[timesheetClient] /api/pay-periods returned ${periodsRes.status}`);
@@ -42,7 +47,7 @@ export async function fetchTimesheetNetPay(
 
     const payRes = await fetch(
       `${timesheetUrl}/api/pay-periods/${period.id}/pay`,
-      { signal: AbortSignal.timeout(5000), cache: "no-store" }
+      { signal: AbortSignal.timeout(5000), cache: "no-store", headers }
     );
     if (!payRes.ok) {
       console.warn(`[timesheetClient] /pay returned ${payRes.status} for period ${period.id}`);
