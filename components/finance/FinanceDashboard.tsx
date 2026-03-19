@@ -12,6 +12,10 @@ import {
   Trash2,
   Wifi,
   WifiOff,
+  Lock,
+  LockOpen,
+  RotateCcw,
+  Download,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────
@@ -35,6 +39,7 @@ type MonthData = {
   month: number;
   netPay: string | null;
   netPayIsManual: boolean;
+  archivedAt: string | null;
   entries: Entry[];
 };
 
@@ -263,8 +268,29 @@ export default function FinanceDashboard() {
     }
   }
 
+  // ─── Month actions ──────────────────────────────────────────────
+
+  async function clearDefaults() {
+    if (!confirm("Remove all budget item entries? Unplanned entries will be kept.")) return;
+    const res = await fetch(`/api/finance/months/${year}/${month}/clear-defaults`, { method: "POST" });
+    if (res.ok) setMonthData(await res.json());
+  }
+
+  async function loadDefaults() {
+    const res = await fetch(`/api/finance/months/${year}/${month}/load-defaults`, { method: "POST" });
+    if (res.ok) setMonthData(await res.json());
+  }
+
+  async function toggleArchive() {
+    const isArchived = !!monthData?.archivedAt;
+    if (!isArchived && !confirm("Lock this month? You can unlock it later.")) return;
+    const res = await fetch(`/api/finance/months/${year}/${month}/archive`, { method: "POST" });
+    if (res.ok) setMonthData(await res.json());
+  }
+
   // ─── Derived values ─────────────────────────────────────────────
 
+  const isArchived = !!monthData?.archivedAt;
   const entries = monthData?.entries ?? [];
   const netPay = monthData?.netPay ? parseFloat(monthData.netPay) : null;
   const totalCommitted = entries.reduce((sum, e) => sum + parseFloat(e.amount), 0);
@@ -377,10 +403,12 @@ export default function FinanceDashboard() {
           ) : (
             <button
               onClick={() => {
+                if (isArchived) return;
                 setEditingNetPay(true);
                 setNetPayInput(netPay != null ? netPay.toFixed(2) : "");
               }}
               className="flex items-center justify-center gap-1.5 mx-auto group"
+              style={{ cursor: isArchived ? "default" : "pointer" }}
             >
               <span
                 className="text-lg font-bold"
@@ -388,11 +416,13 @@ export default function FinanceDashboard() {
               >
                 {netPay != null ? fmt(netPay) : "—"}
               </span>
-              <Pencil
-                size={12}
-                className="opacity-30 group-hover:opacity-70 transition-opacity"
-                style={{ color: "var(--text-secondary)" }}
-              />
+              {!isArchived && (
+                <Pencil
+                  size={12}
+                  className="opacity-30 group-hover:opacity-70 transition-opacity"
+                  style={{ color: "var(--text-secondary)" }}
+                />
+              )}
             </button>
           )}
 
@@ -447,6 +477,52 @@ export default function FinanceDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Archived banner */}
+      {isArchived && (
+        <div
+          className="mb-4 px-3 py-2 rounded-lg flex items-center gap-2 text-sm"
+          style={{ backgroundColor: "#1e293b", border: "1px solid #475569", color: "#94a3b8" }}
+        >
+          <Lock size={13} />
+          This month is locked. Unlock to make changes.
+        </div>
+      )}
+
+      {/* Action buttons */}
+      {!loading && monthData && (
+        <div className="flex flex-wrap gap-2 mb-5">
+          {!isArchived && (
+            <>
+              <button
+                onClick={clearDefaults}
+                className="btn-secondary btn-sm flex items-center gap-1.5"
+                title="Remove all budget item entries (keep unplanned)"
+              >
+                <RotateCcw size={13} />
+                Clear Defaults
+              </button>
+              <button
+                onClick={loadDefaults}
+                className="btn-secondary btn-sm flex items-center gap-1.5"
+                title="Re-add any missing budget items from settings"
+              >
+                <Download size={13} />
+                Load Defaults
+              </button>
+            </>
+          )}
+          <button
+            onClick={toggleArchive}
+            className={isArchived ? "btn-secondary btn-sm flex items-center gap-1.5" : "btn-secondary btn-sm flex items-center gap-1.5"}
+            style={isArchived ? { borderColor: "#4ade80", color: "#4ade80" } : {}}
+            title={isArchived ? "Unlock this month" : "Lock and archive this month"}
+          >
+            {isArchived ? <LockOpen size={13} /> : <Lock size={13} />}
+            {isArchived ? "Unlock Month" : "Complete Month"}
+          </button>
+        </div>
+      )}
 
       {/* Loading state */}
       {loading && (
@@ -507,13 +583,15 @@ export default function FinanceDashboard() {
                   >
                     {/* Paid checkbox */}
                     <button
-                      onClick={() => togglePaid(entry.id, entry.isPaid)}
+                      onClick={() => !isArchived && togglePaid(entry.id, entry.isPaid)}
                       className="shrink-0 flex items-center justify-center w-5 h-5 rounded transition-all"
                       style={{
                         border: `1.5px solid ${entry.isPaid ? "#4ade80" : "var(--bg-400)"}`,
                         backgroundColor: entry.isPaid ? "#4ade8025" : "transparent",
+                        cursor: isArchived ? "default" : "pointer",
+                        opacity: isArchived ? 0.6 : 1,
                       }}
-                      title={entry.isPaid ? "Mark unpaid" : "Mark paid"}
+                      title={isArchived ? undefined : entry.isPaid ? "Mark unpaid" : "Mark paid"}
                     >
                       {entry.isPaid && <Check size={11} style={{ color: "#4ade80" }} />}
                     </button>
@@ -538,9 +616,9 @@ export default function FinanceDashboard() {
                       {entry.payDay ? ordinal(entry.payDay) : "—"}
                     </span>
 
-                    {/* Amount — inline editable */}
+                    {/* Amount — inline editable (disabled when archived) */}
                     <div className="w-24 text-right shrink-0">
-                      {editingAmounts[entry.id] !== undefined ? (
+                      {!isArchived && editingAmounts[entry.id] !== undefined ? (
                         <input
                           autoFocus
                           className="input text-right text-sm w-full"
@@ -560,22 +638,29 @@ export default function FinanceDashboard() {
                       ) : (
                         <button
                           onClick={() =>
+                            !isArchived &&
                             setEditingAmounts((prev) => ({
                               ...prev,
                               [entry.id]: parseFloat(entry.amount).toFixed(2),
                             }))
                           }
-                          className="text-sm font-medium tabular-nums hover:underline"
-                          style={{ color: "var(--text-primary)" }}
-                          title="Click to edit"
+                          className="text-sm font-medium tabular-nums"
+                          style={{
+                            color: "var(--text-primary)",
+                            cursor: isArchived ? "default" : "pointer",
+                            textDecoration: isArchived ? "none" : undefined,
+                          }}
+                          onMouseEnter={(e) => { if (!isArchived) e.currentTarget.style.textDecoration = "underline"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.textDecoration = "none"; }}
+                          title={isArchived ? undefined : "Click to edit"}
                         >
                           {fmt(entry.amount)}
                         </button>
                       )}
                     </div>
 
-                    {/* Delete — UNPLANNED entries only */}
-                    {entry.category === "UNPLANNED" && (
+                    {/* Delete — UNPLANNED entries only, hidden when archived */}
+                    {entry.category === "UNPLANNED" && !isArchived && (
                       <button
                         onClick={() => deleteEntry(entry.id, entry.name)}
                         className="shrink-0 opacity-30 hover:opacity-80 transition-opacity"
@@ -585,11 +670,15 @@ export default function FinanceDashboard() {
                         <Trash2 size={13} />
                       </button>
                     )}
+                    {/* Spacer to keep alignment when delete hidden in archived mode */}
+                    {entry.category === "UNPLANNED" && isArchived && (
+                      <span className="shrink-0 w-[13px]" />
+                    )}
                   </div>
                 ))}
 
-                {/* UNPLANNED: add form */}
-                {cat === "UNPLANNED" && (
+                {/* UNPLANNED: add form (hidden when archived) */}
+                {cat === "UNPLANNED" && !isArchived && (
                   <>
                     {addingUnplanned ? (
                       <div
