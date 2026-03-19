@@ -10,7 +10,25 @@ async function getOrCreateMonth(year: number, month: number) {
     where: { year_month: { year, month } },
     include: { entries: ENTRY_ORDER },
   });
-  if (existing) return existing;
+
+  // If month exists but has no non-UNPLANNED entries, check if items now exist
+  // and re-seed if so (handles case where page was first visited before items were set up)
+  if (existing) {
+    const hasSeededEntries = existing.entries.some((e) => e.itemId != null);
+    if (!hasSeededEntries) {
+      const itemCount = await prisma.financeBudgetItem.count({
+        where: { isActive: true, NOT: { category: "UNPLANNED" } },
+      });
+      if (itemCount > 0) {
+        // Delete and re-create so the seed logic below runs fresh
+        await prisma.financeMonth.delete({ where: { id: existing.id } });
+      } else {
+        return existing;
+      }
+    } else {
+      return existing;
+    }
+  }
 
   // Seed from active budget items (skip UNPLANNED — those are ad-hoc)
   const items = await prisma.financeBudgetItem.findMany({
