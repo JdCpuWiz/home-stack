@@ -39,24 +39,22 @@ function nodeGet(url: string, headers: Record<string, string>): Promise<unknown>
       }
     );
 
-    req.on("timeout", () => {
-      req.destroy();
-      reject(new Error("Request timed out"));
-    });
+    req.on("timeout", () => { req.destroy(); reject(new Error("Request timed out")); });
     req.on("error", reject);
     req.end();
   });
 }
+
+type ApiResponse<T> = { success: boolean; data: T };
+type RawPeriod = { id: number; startDate: string };
+type RawPay = { netPay: number };
 
 export async function fetchTimesheetNetPay(
   year: number,
   month: number
 ): Promise<number | null> {
   const timesheetUrl = process.env.TIMESHEET_URL;
-  if (!timesheetUrl) {
-    console.warn("[timesheetClient] TIMESHEET_URL is not set");
-    return null;
-  }
+  if (!timesheetUrl) return null;
 
   const apiKey = process.env.TIMESHEET_API_KEY;
   const headers: Record<string, string> = apiKey
@@ -66,47 +64,21 @@ export async function fetchTimesheetNetPay(
   try {
     const paddedMonth = String(month).padStart(2, "0");
     const targetStartDate = `${year}-${paddedMonth}-15`;
-    console.log(`[timesheetClient] fetching periods from ${timesheetUrl}/api/pay-periods, looking for start_date=${targetStartDate}`);
 
-    const periodsRaw = await nodeGet(`${timesheetUrl}/api/pay-periods`, headers);
-    console.log("[timesheetClient] periodsRaw type:", typeof periodsRaw, "isArray:", Array.isArray(periodsRaw));
-    console.log("[timesheetClient] periodsRaw keys:", periodsRaw && typeof periodsRaw === "object" ? Object.keys(periodsRaw as object).join(",") : String(periodsRaw));
+    const periodsRes = await nodeGet(`${timesheetUrl}/api/pay-periods`, headers) as ApiResponse<RawPeriod[]>;
+    const periods = periodsRes.data;
 
-    // Handle both bare array and { success, data: [] } envelope
-    type RawPeriod = Record<string, unknown>;
-    const periods: RawPeriod[] = Array.isArray(periodsRaw)
-      ? (periodsRaw as RawPeriod[])
-      : ((periodsRaw as { data?: RawPeriod[] })?.data ?? []);
+    const period = periods.find(
+      (p) => p.startDate && p.startDate.substring(0, 10) === targetStartDate
+    );
+    if (!period) return null;
 
-    if (!Array.isArray(periods) || periods.length === 0) {
-      console.warn("[timesheetClient] periods is empty or not an array");
-      return null;
-    }
+    const payRes = await nodeGet(`${timesheetUrl}/api/pay-periods/${period.id}/pay`, headers) as ApiResponse<RawPay>;
+    const netPay = payRes.data?.netPay;
 
-    // Log first period's keys so we can see the actual property names
-    console.log(`[timesheetClient] got ${periods.length} periods, first period keys:`, Object.keys(periods[0]).join(", "));
-    console.log(`[timesheetClient] checking for ${targetStartDate}`);
-
-    // Support both snake_case (start_date) and camelCase (startDate)
-    const period = periods.find((p) => {
-      const d = (p.start_date ?? p.startDate ?? "") as string;
-      return d.substring(0, 10) === targetStartDate;
-    });
-    if (!period) {
-      console.warn(`[timesheetClient] no period found with start_date=${targetStartDate}`);
-      return null;
-    }
-
-    const payRaw = await nodeGet(`${timesheetUrl}/api/pay-periods/${period.id}/pay`, headers);
-    console.log("[timesheetClient] payRaw keys:", payRaw && typeof payRaw === "object" ? Object.keys(payRaw as object).join(",") : String(payRaw));
-
-    // Handle both bare PayCalculation and { success, data: PayCalculation } envelope
-    const payData = (payRaw as { data?: Record<string, unknown> })?.data ?? (payRaw as Record<string, unknown>);
-    const netPay = payData?.netPay ?? payData?.net_pay;
-    console.log(`[timesheetClient] netPay=${netPay}`);
     return typeof netPay === "number" ? netPay : null;
   } catch (err) {
-    console.error("[timesheetClient] fetch error:", err);
+    console.error("[timesheetClient] error:", err);
     return null;
   }
 }
