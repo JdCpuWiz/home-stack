@@ -186,6 +186,61 @@ model EmailDigest {
   updatedAt       DateTime  @updatedAt
 }
 
+// ─── Finance ──────────────────────────────────────────────────────
+enum FinanceCategory {
+  BILLS
+  SUBSCRIPTIONS
+  SHARED_CREDIT
+  MY_CARDS
+  SHARED_CARDS
+  LOANS
+  UNPLANNED
+}
+
+model FinanceBudgetItem {
+  id            Int                  @id @default(autoincrement())
+  name          String
+  category      FinanceCategory
+  defaultAmount Decimal?             @db.Decimal(10, 2)
+  payDay        Int?
+  isActive      Boolean              @default(true)
+  position      Int                  @default(0)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  entries       FinanceBudgetEntry[]
+}
+
+model FinanceMonth {
+  id             Int                  @id @default(autoincrement())
+  year           Int
+  month          Int
+  netPay         Decimal?             @db.Decimal(10, 2)
+  netPayIsManual Boolean              @default(false)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  entries        FinanceBudgetEntry[]
+
+  @@unique([year, month])
+}
+
+model FinanceBudgetEntry {
+  id        Int                @id @default(autoincrement())
+  monthId   Int
+  month     FinanceMonth       @relation(fields: [monthId], references: [id], onDelete: Cascade)
+  itemId    Int?
+  item      FinanceBudgetItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  name      String
+  category  FinanceCategory
+  amount    Decimal            @db.Decimal(10, 2)
+  payDay    Int?
+  isPaid    Boolean            @default(false)
+  paidAt    DateTime?
+  notes     String?
+  position  Int                @default(0)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+}
+
 // ─── Recipes ──────────────────────────────────────────────────────
 model Recipe {
   id          Int                @id @default(autoincrement())
