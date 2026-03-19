@@ -2,15 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAuthorized } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 
-function todayMidnightUTC(): Date {
-  return new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
-}
-
 type DigestEntry = { sender: string; count: number };
 
 // POST /api/email-digest/tally — increment count for a single sender
 // Handles approved sender matching and label mapping server-side.
-// Silently ignores senders not on the approved list (when list is configured).
+// Unapproved senders increment unapprovedCount only (not tracked by name).
 export async function POST(request: NextRequest) {
   if (!(await isAuthorized(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -25,47 +21,63 @@ export async function POST(request: NextRequest) {
 
   const senderLower = sender.trim().toLowerCase();
 
-  // Match against approved senders list
   const approvedSenders = await prisma.approvedSender.findMany();
-  let displayName: string;
+  let displayName: string | null = null;
 
   if (approvedSenders.length > 0) {
     const match = approvedSenders.find((s) => {
       const val = s.value.toLowerCase();
-      return senderLower === val || senderLower.endsWith("@" + val);
+      return senderLower === val || senderLower.endsWith("@" + val) ||
+        (val.startsWith("@") && senderLower.endsWith(val));
     });
-    if (!match) {
-      // Not an approved sender — ignore silently
-      return NextResponse.json({ ok: true, ignored: true });
+    if (match) {
+      displayName = match.label || sender.trim();
     }
-    displayName = match.label || sender.trim();
+    // else: unapproved — displayName stays null
   } else {
     // No approved senders configured — store everything
     displayName = sender.trim();
   }
 
-  const reportDate = todayMidnightUTC();
+  // Find the active (uncleared) digest
+  const current = await prisma.emailDigest.findFirst({
+    where: { clearedAt: null },
+    orderBy: { startedAt: "desc" },
+  });
 
-  // Read current digest, increment this sender, write back
-  const current = await prisma.emailDigest.findFirst({ where: { reportDate } });
   const entries: DigestEntry[] = Array.isArray(current?.entries)
     ? (current.entries as DigestEntry[]).map((e) => ({ ...e }))
     : [];
 
-  const existing = entries.find((e) => e.sender === displayName);
-  if (existing) {
-    existing.count += 1;
+  if (displayName !== null) {
+    // Approved sender — increment named entry
+    const existing = entries.find((e) => e.sender === displayName);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      entries.push({ sender: displayName, count: 1 });
+    }
+    const totalCount = entries.reduce((sum, e) => sum + e.count, 0);
+    const unapprovedCount = current?.unapprovedCount ?? 0;
+
+    const digest = await prisma.emailDigest.upsert({
+      where: { id: current?.id ?? -1 },
+      update: { entries, totalCount, updatedAt: new Date() },
+      create: { entries, totalCount, unapprovedCount: 0 },
+    });
+
+    return NextResponse.json(digest);
   } else {
-    entries.push({ sender: displayName, count: 1 });
+    // Unapproved sender — only increment unapprovedCount
+    const unapprovedCount = (current?.unapprovedCount ?? 0) + 1;
+    const totalCount = (current?.totalCount ?? 0) + 1;
+
+    const digest = await prisma.emailDigest.upsert({
+      where: { id: current?.id ?? -1 },
+      update: { unapprovedCount, totalCount, updatedAt: new Date() },
+      create: { entries: [], totalCount: 1, unapprovedCount: 1 },
+    });
+
+    return NextResponse.json({ ok: true, unapproved: true, digest });
   }
-
-  const totalCount = entries.reduce((sum, e) => sum + e.count, 0);
-
-  const digest = await prisma.emailDigest.upsert({
-    where: { reportDate },
-    update: { entries, totalCount, updatedAt: new Date() },
-    create: { reportDate, entries, totalCount },
-  });
-
-  return NextResponse.json(digest);
 }

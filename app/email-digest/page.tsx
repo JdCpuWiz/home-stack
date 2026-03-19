@@ -1,118 +1,293 @@
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { useEffect, useState, useCallback } from "react";
+import { Trash2 } from "lucide-react";
 
 type DigestEntry = { sender: string; count: number };
 
-export default async function EmailDigestPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
+type Sender = {
+  id: number;
+  value: string;
+  label: string | null;
+  priority: string;
+  description: string | null;
+};
 
-  const todayMidnightUTC = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
+type Digest = {
+  id: number;
+  startedAt: string;
+  clearedAt: string | null;
+  totalCount: number;
+  unapprovedCount: number;
+  entries: DigestEntry[];
+};
 
-  const [todayDigest, history] = await Promise.all([
-    prisma.emailDigest.findFirst({
-      where: { reportDate: todayMidnightUTC },
-    }),
-    prisma.emailDigest.findMany({
-      orderBy: { reportDate: "desc" },
-      take: 7,
-    }),
-  ]);
+function formatDateRange(startedAt: string, clearedAt: string | null) {
+  const start = new Date(startedAt).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+  if (!clearedAt) return `Since ${start}`;
+  const end = new Date(clearedAt).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+  return start === end ? start : `${start} – ${end}`;
+}
 
-  const todayEntries: DigestEntry[] = todayDigest
-    ? ((todayDigest.entries as DigestEntry[]).slice().sort((a, b) => b.count - a.count))
+export default function EmailDigestPage() {
+  const [active, setActive] = useState<Digest | null>(null);
+  const [history, setHistory] = useState<Digest[]>([]);
+  const [senders, setSenders] = useState<Sender[]>([]);
+  const [clearing, setClearing] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  const load = useCallback(async () => {
+    const [digestRes, sendersRes] = await Promise.all([
+      fetch("/api/email-digest"),
+      fetch("/api/email-digest/senders"),
+    ]);
+    if (digestRes.ok) {
+      const data = await digestRes.json();
+      setActive(data.active ?? null);
+      setHistory(data.history ?? []);
+    }
+    if (sendersRes.ok) setSenders(await sendersRes.json());
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function handleClear() {
+    if (!confirm("Archive the current digest and start fresh?")) return;
+    setClearing(true);
+    const res = await fetch("/api/email-digest/clear", { method: "POST" });
+    if (res.ok) await load();
+    setClearing(false);
+  }
+
+  // Build lookup: displayName → sender row (for priority/description)
+  const senderByDisplay = new Map<string, Sender>();
+  for (const s of senders) {
+    senderByDisplay.set(s.label || s.value, s);
+  }
+
+  const entries: DigestEntry[] = active
+    ? [...(active.entries as DigestEntry[])].sort((a, b) => b.count - a.count)
     : [];
 
-  const pastHistory = history.filter(
-    (d) => d.reportDate.toISOString() !== todayMidnightUTC.toISOString()
-  );
+  const highPriority = entries.filter((e) => {
+    const s = senderByDisplay.get(e.sender);
+    return s?.priority === "HIGH";
+  });
+  const normal = entries.filter((e) => {
+    const s = senderByDisplay.get(e.sender);
+    return !s || s.priority === "NORMAL";
+  });
+  const low = entries.filter((e) => {
+    const s = senderByDisplay.get(e.sender);
+    return s?.priority === "LOW";
+  });
+
+  const approvedCount = entries.reduce((s, e) => s + e.count, 0);
+  const totalCount = active?.totalCount ?? 0;
 
   return (
-    <div className="flex flex-col gap-8 max-w-3xl">
-      <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-        Email Digest
-      </h1>
-
-      {/* Today's digest */}
-      <section>
-        <h2 className="text-lg font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
-          Today
-        </h2>
-        {!todayDigest ? (
-          <div className="card">
-            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-              No digest received yet for today. Configure your n8n workflow to POST to{" "}
-              <code className="text-xs px-1 py-0.5 rounded" style={{ backgroundColor: "var(--bg-300)" }}>
-                /api/email-digest
-              </code>
-              .
+    <div className="flex flex-col gap-8 max-w-2xl">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+            Email Digest
+          </h1>
+          {active && (
+            <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
+              {formatDateRange(active.startedAt, null)}
             </p>
-          </div>
-        ) : (
-          <div className="card">
-            <table className="wiz-table w-full">
-              <thead>
-                <tr>
-                  <th className="text-left">Sender</th>
-                  <th className="text-right">Count</th>
-                </tr>
-              </thead>
-              <tbody>
-                {todayEntries.map((entry, i) => (
-                  <tr key={i}>
-                    <td style={{ color: "var(--text-primary)" }}>{entry.sender}</td>
-                    <td className="text-right" style={{ color: "var(--accent-orange)" }}>
-                      {entry.count}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td className="font-semibold" style={{ color: "var(--text-primary)" }}>
-                    Total
-                  </td>
-                  <td
-                    className="text-right font-bold"
-                    style={{ color: "var(--accent-orange)" }}
-                  >
-                    {todayDigest.totalCount}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+          )}
+        </div>
+        {active && (
+          <button
+            className="btn-secondary btn-sm flex items-center gap-1.5 mt-1"
+            onClick={handleClear}
+            disabled={clearing}
+          >
+            <Trash2 size={13} />
+            Clear &amp; Archive
+          </button>
         )}
-      </section>
+      </div>
 
-      {/* Recent history */}
-      {pastHistory.length > 0 && (
+      {!loaded ? (
+        <p className="text-sm" style={{ color: "var(--text-secondary)" }}>Loading…</p>
+      ) : !active || totalCount === 0 ? (
+        <div className="card">
+          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+            No emails tallied yet. Configure your n8n workflow to POST to{" "}
+            <code className="text-xs px-1 py-0.5 rounded" style={{ backgroundColor: "var(--bg-300)" }}>
+              /api/email-digest/tally
+            </code>
+            .
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Summary bar */}
+          <div
+            className="card flex items-center gap-6 flex-wrap"
+            style={{ backgroundColor: "var(--bg-100)" }}
+          >
+            <div className="text-center">
+              <div className="text-3xl font-bold" style={{ color: "var(--accent-orange)" }}>
+                {totalCount}
+              </div>
+              <div className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>
+                total emails
+              </div>
+            </div>
+            {approvedCount > 0 && (
+              <div className="text-center">
+                <div className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
+                  {approvedCount}
+                </div>
+                <div className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>
+                  from approved
+                </div>
+              </div>
+            )}
+            {(active.unapprovedCount ?? 0) > 0 && (
+              <div className="text-center">
+                <div
+                  className="text-3xl font-bold"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {active.unapprovedCount}
+                </div>
+                <div className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>
+                  unapproved
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* High priority */}
+          {highPriority.length > 0 && (
+            <section>
+              <h2
+                className="text-xs font-semibold uppercase tracking-wider mb-3"
+                style={{ color: "var(--accent-orange)" }}
+              >
+                High Priority
+              </h2>
+              <div className="flex flex-col gap-2">
+                {highPriority.map((entry) => {
+                  const s = senderByDisplay.get(entry.sender);
+                  return (
+                    <div key={entry.sender} className="card-surface rounded-lg p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="font-semibold" style={{ color: "var(--text-primary)" }}>
+                          {entry.sender}
+                        </span>
+                        <span
+                          className="text-lg font-bold tabular-nums"
+                          style={{ color: "var(--accent-orange)" }}
+                        >
+                          {entry.count}
+                        </span>
+                      </div>
+                      {s?.description && (
+                        <p className="text-xs mt-1.5" style={{ color: "var(--text-secondary)" }}>
+                          {s.description}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Approved / Normal */}
+          {normal.length > 0 && (
+            <section>
+              <h2
+                className="text-xs font-semibold uppercase tracking-wider mb-3"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                Approved Senders
+              </h2>
+              <div className="card p-0 overflow-hidden">
+                <table className="wiz-table w-full">
+                  <tbody>
+                    {normal.map((entry) => (
+                      <tr key={entry.sender}>
+                        <td style={{ color: "var(--text-primary)" }}>{entry.sender}</td>
+                        <td
+                          className="text-right font-semibold tabular-nums"
+                          style={{ color: "var(--accent-orange)" }}
+                        >
+                          {entry.count}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {/* Low priority */}
+          {low.length > 0 && (
+            <section>
+              <h2
+                className="text-xs font-semibold uppercase tracking-wider mb-3"
+                style={{ color: "var(--text-secondary)", opacity: 0.6 }}
+              >
+                Low Priority
+              </h2>
+              <div className="card p-0 overflow-hidden" style={{ opacity: 0.65 }}>
+                <table className="wiz-table w-full">
+                  <tbody>
+                    {low.map((entry) => (
+                      <tr key={entry.sender}>
+                        <td style={{ color: "var(--text-secondary)" }}>{entry.sender}</td>
+                        <td
+                          className="text-right tabular-nums"
+                          style={{ color: "var(--text-secondary)" }}
+                        >
+                          {entry.count}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+        </>
+      )}
+
+      {/* History */}
+      {history.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
-            Recent History
+          <h2
+            className="text-xs font-semibold uppercase tracking-wider mb-3"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            History
           </h2>
           <div className="card flex flex-col gap-2">
-            {pastHistory.map((d) => (
+            {history.map((d) => (
               <div
                 key={d.id}
-                className="flex items-center justify-between text-sm card-surface"
+                className="flex items-center justify-between text-sm card-surface rounded px-3 py-2"
               >
                 <span style={{ color: "var(--text-secondary)" }}>
-                  {d.reportDate.toLocaleDateString("en-US", {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
-                    timeZone: "UTC",
-                  })}
+                  {formatDateRange(d.startedAt, d.clearedAt)}
                 </span>
-                <span
-                  className="font-semibold"
-                  style={{ color: "var(--accent-orange)" }}
-                >
+                <span className="font-semibold" style={{ color: "var(--accent-orange)" }}>
                   {d.totalCount} emails
                 </span>
               </div>

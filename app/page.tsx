@@ -12,7 +12,6 @@ export default async function DashboardPage() {
   if (!session) redirect("/login");
 
   const now = new Date();
-  const todayMidnightUTC = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
   const [toteCount, todoCount, overdueCount, activeGroceryLists, recipeCount, activePackageCount, outForDeliveryCount, todayDigest] = await Promise.all([
     prisma.tote.count(),
     prisma.todoItem.count(),
@@ -28,7 +27,7 @@ export default async function DashboardPage() {
     prisma.recipe.count(),
     prisma.package.count({ where: { delivered: false } }),
     prisma.package.count({ where: { status: "OUT_FOR_DELIVERY" } }),
-    prisma.emailDigest.findFirst({ where: { reportDate: todayMidnightUTC }, select: { totalCount: true } }),
+    prisma.emailDigest.findFirst({ where: { clearedAt: null }, select: { totalCount: true } }),
   ]);
 
   return (
