@@ -73,21 +73,25 @@ export async function fetchTimesheetNetPay(
     console.log("[timesheetClient] periodsRaw keys:", periodsRaw && typeof periodsRaw === "object" ? Object.keys(periodsRaw as object).join(",") : String(periodsRaw));
 
     // Handle both bare array and { success, data: [] } envelope
-    const periods: Array<{ id: number; start_date: string }> = Array.isArray(periodsRaw)
-      ? (periodsRaw as Array<{ id: number; start_date: string }>)
-      : (periodsRaw as { data?: Array<{ id: number; start_date: string }> })?.data ?? [];
+    type RawPeriod = Record<string, unknown>;
+    const periods: RawPeriod[] = Array.isArray(periodsRaw)
+      ? (periodsRaw as RawPeriod[])
+      : ((periodsRaw as { data?: RawPeriod[] })?.data ?? []);
 
     if (!Array.isArray(periods) || periods.length === 0) {
       console.warn("[timesheetClient] periods is empty or not an array");
       return null;
     }
 
-    console.log(`[timesheetClient] got ${periods.length} periods:`, periods.map(p => p.start_date.substring(0, 10)).join(", "));
+    // Log first period's keys so we can see the actual property names
+    console.log(`[timesheetClient] got ${periods.length} periods, first period keys:`, Object.keys(periods[0]).join(", "));
     console.log(`[timesheetClient] checking for ${targetStartDate}`);
 
-    const period = periods.find(
-      (p) => p.start_date && p.start_date.substring(0, 10) === targetStartDate
-    );
+    // Support both snake_case (start_date) and camelCase (startDate)
+    const period = periods.find((p) => {
+      const d = (p.start_date ?? p.startDate ?? "") as string;
+      return d.substring(0, 10) === targetStartDate;
+    });
     if (!period) {
       console.warn(`[timesheetClient] no period found with start_date=${targetStartDate}`);
       return null;
@@ -97,9 +101,10 @@ export async function fetchTimesheetNetPay(
     console.log("[timesheetClient] payRaw keys:", payRaw && typeof payRaw === "object" ? Object.keys(payRaw as object).join(",") : String(payRaw));
 
     // Handle both bare PayCalculation and { success, data: PayCalculation } envelope
-    const payData = (payRaw as { data?: { netPay?: number } })?.data ?? (payRaw as { netPay?: number });
-    console.log(`[timesheetClient] netPay=${payData?.netPay}`);
-    return typeof payData?.netPay === "number" ? payData.netPay : null;
+    const payData = (payRaw as { data?: Record<string, unknown> })?.data ?? (payRaw as Record<string, unknown>);
+    const netPay = payData?.netPay ?? payData?.net_pay;
+    console.log(`[timesheetClient] netPay=${netPay}`);
+    return typeof netPay === "number" ? netPay : null;
   } catch (err) {
     console.error("[timesheetClient] fetch error:", err);
     return null;
