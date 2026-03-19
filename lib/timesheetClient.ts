@@ -3,6 +3,15 @@
  * Pay periods run 15th → 14th; the relevant period for a finance month
  * is the one starting on the 15th of that month (paid on the 25th).
  */
+
+function fetchWithTimeout(url: string, options: RequestInit, ms = 5000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() =>
+    clearTimeout(timer)
+  );
+}
+
 export async function fetchTimesheetNetPay(
   year: number,
   month: number
@@ -23,10 +32,10 @@ export async function fetchTimesheetNetPay(
     const targetStartDate = `${year}-${paddedMonth}-15`;
     console.log(`[timesheetClient] fetching periods from ${timesheetUrl}/api/pay-periods, looking for start_date=${targetStartDate}`);
 
-    const periodsRes = await fetch(`${timesheetUrl}/api/pay-periods`, {
-      signal: AbortSignal.timeout(5000),
-      headers,
-    });
+    const periodsRes = await fetchWithTimeout(
+      `${timesheetUrl}/api/pay-periods`,
+      { headers }
+    );
     if (!periodsRes.ok) {
       console.warn(`[timesheetClient] /api/pay-periods returned ${periodsRes.status}`);
       return null;
@@ -45,9 +54,9 @@ export async function fetchTimesheetNetPay(
       return null;
     }
 
-    const payRes = await fetch(
+    const payRes = await fetchWithTimeout(
       `${timesheetUrl}/api/pay-periods/${period.id}/pay`,
-      { signal: AbortSignal.timeout(5000), headers }
+      { headers }
     );
     if (!payRes.ok) {
       console.warn(`[timesheetClient] /pay returned ${payRes.status} for period ${period.id}`);
