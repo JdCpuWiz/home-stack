@@ -68,14 +68,15 @@ export async function fetchTimesheetNetPay(
     const targetStartDate = `${year}-${paddedMonth}-15`;
     console.log(`[timesheetClient] fetching periods from ${timesheetUrl}/api/pay-periods, looking for start_date=${targetStartDate}`);
 
-    const periods = await nodeGet(
+    const periodsRes = await nodeGet(
       `${timesheetUrl}/api/pay-periods`,
       headers
-    ) as Array<{ id: number; start_date: string }>;
+    ) as { success: boolean; data: Array<{ id: number; start_date: string }> };
 
-    console.log(`[timesheetClient] got ${periods.length} periods, first start_dates:`, periods.slice(0, 3).map(p => p.start_date));
+    const periods = Array.isArray(periodsRes) ? periodsRes : periodsRes.data;
+    console.log(`[timesheetClient] got ${periods?.length} periods, first start_dates:`, periods?.slice(0, 3).map(p => p.start_date));
 
-    const period = periods.find(
+    const period = periods?.find(
       (p) => p.start_date && p.start_date.substring(0, 10) === targetStartDate
     );
     if (!period) {
@@ -83,11 +84,12 @@ export async function fetchTimesheetNetPay(
       return null;
     }
 
-    const payData = await nodeGet(
+    const payRes = await nodeGet(
       `${timesheetUrl}/api/pay-periods/${period.id}/pay`,
       headers
-    ) as { netPay?: number };
+    ) as { success: boolean; data: { netPay?: number } } | { netPay?: number };
 
+    const payData = "data" in payRes ? payRes.data : payRes;
     console.log(`[timesheetClient] netPay=${payData.netPay}`);
     return typeof payData.netPay === "number" ? payData.netPay : null;
   } catch (err) {
