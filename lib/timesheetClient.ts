@@ -82,7 +82,8 @@ export async function fetchTimesheetNetPay(
       return null;
     }
 
-    console.log(`[timesheetClient] got ${periods.length} periods, checking for ${targetStartDate}`);
+    console.log(`[timesheetClient] got ${periods.length} periods:`, periods.map(p => p.start_date.substring(0, 10)).join(", "));
+    console.log(`[timesheetClient] checking for ${targetStartDate}`);
 
     const period = periods.find(
       (p) => p.start_date && p.start_date.substring(0, 10) === targetStartDate
