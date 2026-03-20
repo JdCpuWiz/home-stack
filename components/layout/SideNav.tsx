@@ -148,7 +148,7 @@ export default function SideNav({ open, onClose }: Props) {
       <aside
         className={[
           "fixed inset-y-0 left-0 z-40 flex flex-col w-60 shrink-0",
-          "md:static md:z-auto md:translate-x-0",
+          "md:static md:z-auto md:translate-x-0 md:h-screen md:sticky md:top-0",
           "transition-transform duration-200 ease-in-out",
           open ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
