@@ -412,13 +412,13 @@ export default function FinanceDashboard() {
               Net Pay
             </span>
             {syncStatus === "syncing" && (
-              <RefreshCw size={11} className="animate-spin" style={{ color: "var(--text-secondary)" }} title="Syncing with timesheet…" />
+              <span title="Syncing with timesheet…"><RefreshCw size={11} className="animate-spin" style={{ color: "var(--text-secondary)" }} /></span>
             )}
             {syncStatus === "ok" && (
-              <Wifi size={11} style={{ color: "#4ade80" }} title="Synced with timesheet" />
+              <span title="Synced with timesheet"><Wifi size={11} style={{ color: "#4ade80" }} /></span>
             )}
             {syncStatus === "unavailable" && (
-              <WifiOff size={11} style={{ color: "#f87171" }} title="Timesheet unavailable" />
+              <span title="Timesheet unavailable"><WifiOff size={11} style={{ color: "#f87171" }} /></span>
             )}
           </div>
 
