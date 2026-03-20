@@ -121,14 +121,14 @@ export default function SideNav({ open, onClose }: Props) {
   const router = useRouter();
 
   const [sections, setSections] = useState<Record<string, boolean>>({
-    totes: true,
-    todos: true,
-    packages: true,
-    email: true,
-    finance: true,
-    recipes: true,
-    grocery: true,
-    settings: true,
+    totes: false,
+    todos: false,
+    packages: false,
+    email: false,
+    finance: false,
+    recipes: false,
+    grocery: false,
+    settings: false,
   });
 
   function toggleSection(key: string) {
@@ -172,6 +172,8 @@ export default function SideNav({ open, onClose }: Props) {
           {session && (
             <SectionNavLink href="/" label="Dashboard" icon={<LayoutDashboard size={15} />} exact onClick={onClose} />
           )}
+
+          <SectionNavLink href="/search" label="Search" icon={<Search size={15} />} exact onClick={onClose} />
 
           {session && (
             <>
@@ -274,8 +276,6 @@ export default function SideNav({ open, onClose }: Props) {
               )}
             </>
           )}
-
-          <SectionNavLink href="/search" label="Search" icon={<Search size={15} />} exact onClick={onClose} />
 
           {isAdmin && (
             <>
