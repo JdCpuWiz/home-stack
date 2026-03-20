@@ -686,19 +686,19 @@ export default function FinanceDashboard() {
                       )}
                     </div>
 
-                    {/* Delete — UNPLANNED entries only, hidden when archived */}
-                    {entry.category === "UNPLANNED" && !isArchived && (
+                    {/* Delete — all entries, hidden when archived */}
+                    {!isArchived ? (
                       <button
                         onClick={() => deleteEntry(entry.id, entry.name)}
-                        className="shrink-0 opacity-30 hover:opacity-80 transition-opacity"
+                        className="shrink-0 opacity-0 hover:opacity-80 transition-opacity"
                         style={{ color: "#f87171" }}
                         title="Remove"
+                        onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0")}
                       >
                         <Trash2 size={13} />
                       </button>
-                    )}
-                    {/* Spacer to keep alignment when delete hidden in archived mode */}
-                    {entry.category === "UNPLANNED" && isArchived && (
+                    ) : (
                       <span className="shrink-0 w-[13px]" />
                     )}
                   </div>
