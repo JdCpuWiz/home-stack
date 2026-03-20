@@ -521,81 +521,255 @@ Response: `{ "ok": true }`
 
 ## Email Digest
 
-All email digest endpoints accept either a valid session cookie **or** a Bearer token (`Authorization: Bearer <HOMESTACK_API_KEY>`), making them safe to call from n8n without a login flow.
+All email digest endpoints accept either a valid session cookie **or** a Bearer token (`Authorization: Bearer <HOMESTACK_API_KEY>`).
 
-### Get today's digest
+The digest accumulates indefinitely until manually cleared. Unapproved senders (not in `ApprovedSender`) increment `unapprovedCount` but are not stored individually.
+
+### Get active digest + history
 ```
 GET /api/email-digest
 Auth: required (session or Bearer)
 ```
-Returns today's digest object or `null` if none has been posted yet.
 ```json
 {
-  "id": 1,
-  "reportDate": "2025-03-13T00:00:00.000Z",
-  "totalCount": 42,
-  "entries": [
-    { "sender": "orders@amazon.com", "count": 15 },
-    { "sender": "@paypal.com", "count": 8 }
-  ],
-  "createdAt": "...",
-  "updatedAt": "..."
+  "active": {
+    "id": 1,
+    "startedAt": "2025-03-01T00:00:00.000Z",
+    "clearedAt": null,
+    "totalCount": 42,
+    "unapprovedCount": 5,
+    "entries": [
+      { "sender": "orders@amazon.com", "count": 15 }
+    ]
+  },
+  "history": [...]
 }
 ```
 
-### Upsert today's digest
+### Tally a sender (n8n)
 ```
-POST /api/email-digest
+POST /api/email-digest/tally
 Auth: required (session or Bearer)
 Content-Type: application/json
 ```
-Creates or updates the digest for today (midnight UTC). Automatically prunes digests older than 7 days.
 ```json
-{
-  "entries": [
-    { "sender": "orders@amazon.com", "count": 15 },
-    { "sender": "@paypal.com", "count": 8 }
-  ]
-}
+{ "sender": "orders@amazon.com" }
 ```
-`entries`: non-empty array of `{ sender: string, count: number }` — totals are summed automatically.
+Finds the active digest (where `clearedAt` is null) and atomically increments the sender's count if approved, or `unapprovedCount` if not. Creates a new active digest if none exists.
 
-Response `200`: upserted digest object.
+Response `200`: `{ "ok": true }`
+
+### Clear & archive active digest
+```
+POST /api/email-digest/clear
+Auth: required (session only)
+```
+Sets `clearedAt` on the active digest, archiving it. A fresh digest is created on the next tally.
+
+Response `200`: archived digest object.
 
 ### List approved senders
 ```
 GET /api/email-digest/senders
 Auth: required (session or Bearer)
 ```
-Response: array of approved sender objects.
 ```json
 [
-  { "id": 1, "value": "orders@amazon.com", "label": "Amazon", "createdAt": "..." },
-  { "id": 2, "value": "@paypal.com", "label": null, "createdAt": "..." }
+  {
+    "id": 1,
+    "value": "orders@amazon.com",
+    "label": "Amazon",
+    "priority": "HIGH",
+    "description": "Amazon order confirmations and shipping notifications.",
+    "createdAt": "..."
+  }
 ]
 ```
+`priority`: `"HIGH"` | `"NORMAL"` | `"LOW"`
+`description`: Ollama-generated, only populated for HIGH priority senders.
 
-### Create approved sender (admin only)
+### Create approved sender
 ```
 POST /api/email-digest/senders
-Auth: admin session
+Auth: required (session or Bearer)
 Content-Type: application/json
 ```
 ```json
-{ "value": "orders@amazon.com", "label": "Amazon" }
+{ "value": "orders@amazon.com", "label": "Amazon", "priority": "HIGH" }
 ```
 `value`: exact email or domain wildcard (e.g. `@amazon.com`). Stored lowercased.
-`label`: optional display name.
 
-Response `201`: created sender.
-Response `409`: `{ "error": "Sender already exists" }`
+Response `201`: created sender. `409` if already exists.
 
-### Delete approved sender (admin only)
+### Update sender
+```
+PATCH /api/email-digest/senders/:id
+Auth: required (session or Bearer)
+Content-Type: application/json
+```
+```json
+{ "label": "Amazon Orders", "priority": "NORMAL", "regenerateDescription": true }
+```
+`regenerateDescription`: if `true` and priority is HIGH, calls Ollama to regenerate the description.
+
+### Delete approved sender
 ```
 DELETE /api/email-digest/senders/:id
-Auth: admin session
+Auth: required (session or Bearer)
 ```
-Response: `{ "ok": true }` or `404` if not found.
+Response: `{ "ok": true }`
+
+---
+
+## Finance
+
+Finance endpoints require a valid session cookie (not available to n8n Bearer token).
+
+### Get or create month
+```
+GET /api/finance/months/:year/:month
+Auth: required (session)
+```
+Returns the month with all entries. Creates a fresh month (no entries) if it doesn't exist yet. Use **Load Defaults** to populate entries from budget items.
+
+```json
+{
+  "id": 1,
+  "year": 2026,
+  "month": 3,
+  "netPay": "3200.00",
+  "netPayIsManual": false,
+  "archivedAt": null,
+  "entries": [
+    {
+      "id": 1,
+      "itemId": 5,
+      "name": "Electric Bill",
+      "category": "BILLS",
+      "amount": "120.00",
+      "payDay": 15,
+      "isPaid": false,
+      "paidAt": null,
+      "notes": null,
+      "position": 0
+    }
+  ]
+}
+```
+
+### Update net pay
+```
+PATCH /api/finance/months/:year/:month
+Auth: required (session)
+Content-Type: application/json
+```
+```json
+{ "netPay": 3200.00, "netPayIsManual": true }
+```
+
+### Sync net pay from timesheet
+```
+POST /api/finance/months/:year/:month/sync-pay
+Auth: required (session)
+```
+Fetches net pay from the timesheet app. Auto-updates if no conflict.
+```json
+{
+  "available": true,
+  "timesheetNetPay": 3200.00,
+  "conflict": false,
+  "currentNetPay": 3200.00
+}
+```
+`conflict: true` means timesheet value differs from a manually-entered value — UI prompts the user to choose.
+
+### Add unplanned entry
+```
+POST /api/finance/months/:year/:month/entries
+Auth: required (session)
+Content-Type: application/json
+```
+```json
+{ "name": "Car repair", "amount": 450.00, "category": "UNPLANNED", "payDay": null }
+```
+
+### Load defaults
+```
+POST /api/finance/months/:year/:month/load-defaults
+Auth: required (session)
+```
+Adds any active budget items not already present in the month. Carry-over amounts from previous month if available. Returns `403` if month is archived.
+
+### Clear defaults
+```
+POST /api/finance/months/:year/:month/clear-defaults
+Auth: required (session)
+```
+Deletes all entries linked to a budget item (`itemId != null`). UNPLANNED entries are kept. Returns `403` if archived.
+
+### Archive / unlock month
+```
+POST /api/finance/months/:year/:month/archive
+Auth: required (session)
+```
+Toggles `archivedAt`. Archived months are read-only in the UI.
+
+### Update entry
+```
+PATCH /api/finance/entries/:id
+Auth: required (session)
+Content-Type: application/json
+```
+```json
+{ "amount": 135.00, "isPaid": true, "notes": "Paid via autopay" }
+```
+Setting `isPaid: true` also sets `paidAt` to now. All fields optional.
+
+### Delete entry
+```
+DELETE /api/finance/entries/:id
+Auth: required (session)
+```
+Any entry can be deleted (not just UNPLANNED). Returns `{ "ok": true }`.
+
+### List budget items
+```
+GET /api/finance/items
+Auth: required (session)
+```
+Returns all budget items ordered by category + position.
+
+### Create budget item
+```
+POST /api/finance/items
+Auth: required (session)
+Content-Type: application/json
+```
+```json
+{
+  "name": "Electric Bill",
+  "category": "BILLS",
+  "defaultAmount": 120.00,
+  "payDay": 15,
+  "isActive": true
+}
+```
+`category`: `"BILLS"` | `"SUBSCRIPTIONS"` | `"SHARED_CREDIT"` | `"MY_CARDS"` | `"SHARED_CARDS"` | `"LOANS"` | `"UNPLANNED"`
+
+### Update budget item
+```
+PATCH /api/finance/items/:id
+Auth: required (session)
+Content-Type: application/json
+```
+All fields optional. Set `isActive: false` to deactivate without deleting.
+
+### Delete budget item
+```
+DELETE /api/finance/items/:id
+Auth: required (session)
+```
+Existing month entries with this item's `itemId` get `itemId` set to `null` (ON DELETE SET NULL).
 
 ---
 
