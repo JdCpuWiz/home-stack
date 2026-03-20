@@ -78,6 +78,17 @@ function ordinal(n: number): string {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
+function dueDateColor(payDay: number | null, year: number, month: number, isPaid: boolean): string {
+  if (!payDay || isPaid) return "var(--text-secondary)";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(year, month - 1, payDay);
+  const diffDays = Math.ceil((due.getTime() - today.getTime()) / 86_400_000);
+  if (diffDays <= 1) return "#f87171";  // red — due today, tomorrow, or overdue
+  if (diffDays <= 5) return "#fbbf24";  // yellow — due within 5 days
+  return "var(--text-secondary)";
+}
+
 function fmt(amount: string | number): string {
   const n = typeof amount === "string" ? parseFloat(amount) : amount;
   return isNaN(n)
@@ -643,8 +654,8 @@ export default function FinanceDashboard() {
 
                     {/* Pay day */}
                     <span
-                      className="text-xs w-16 text-right shrink-0"
-                      style={{ color: "var(--text-secondary)" }}
+                      className="text-xs w-16 text-right shrink-0 font-medium"
+                      style={{ color: dueDateColor(entry.payDay, year, month, entry.isPaid) }}
                       title={entry.payDay ? `Due on the ${ordinal(entry.payDay)}` : undefined}
                     >
                       {entry.payDay ? `due ${ordinal(entry.payDay)}` : "—"}
