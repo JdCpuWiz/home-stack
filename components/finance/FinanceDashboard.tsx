@@ -340,7 +340,7 @@ export default function FinanceDashboard() {
           Finance
         </h1>
         <div className="flex items-center gap-1">
-          <button onClick={prevMonth} className="btn-secondary btn-sm p-1.5">
+          <button onClick={prevMonth} className="btn-secondary btn-sm p-1.5" title="Previous month">
             <ChevronLeft size={16} />
           </button>
           <span
@@ -355,7 +355,7 @@ export default function FinanceDashboard() {
           >
             {MONTH_NAMES[month - 1]} {year}
           </span>
-          <button onClick={nextMonth} className="btn-secondary btn-sm p-1.5">
+          <button onClick={nextMonth} className="btn-secondary btn-sm p-1.5" title="Next month">
             <ChevronRight size={16} />
           </button>
         </div>
@@ -401,13 +401,13 @@ export default function FinanceDashboard() {
               Net Pay
             </span>
             {syncStatus === "syncing" && (
-              <RefreshCw size={11} className="animate-spin" style={{ color: "var(--text-secondary)" }} />
+              <RefreshCw size={11} className="animate-spin" style={{ color: "var(--text-secondary)" }} title="Syncing with timesheet…" />
             )}
             {syncStatus === "ok" && (
-              <Wifi size={11} style={{ color: "#4ade80" }} />
+              <Wifi size={11} style={{ color: "#4ade80" }} title="Synced with timesheet" />
             )}
             {syncStatus === "unavailable" && (
-              <WifiOff size={11} style={{ color: "#f87171" }} />
+              <WifiOff size={11} style={{ color: "#f87171" }} title="Timesheet unavailable" />
             )}
           </div>
 
@@ -436,6 +436,7 @@ export default function FinanceDashboard() {
               }}
               className="flex items-center justify-center gap-1.5 mx-auto group"
               style={{ cursor: isArchived ? "default" : "pointer" }}
+              title={isArchived ? "Month is locked" : "Click to edit net pay"}
             >
               <span
                 className="text-lg font-bold"
@@ -570,28 +571,33 @@ export default function FinanceDashboard() {
 
           return (
             <div key={cat} className="mb-4">
-              {/* Section header */}
+              {/* Section header — columns mirror row layout for alignment */}
               <div
-                className="flex items-center justify-between px-3 py-2 rounded-t-lg"
+                className="flex items-center gap-3 px-3 py-2 rounded-t-lg"
                 style={{ backgroundColor: "var(--bg-300)" }}
               >
+                {/* checkbox placeholder */}
+                <span className="w-5 shrink-0" />
+                {/* category name */}
                 <span
-                  className="text-xs font-bold uppercase tracking-wider"
+                  className="flex-1 text-xs font-bold uppercase tracking-wider"
                   style={{ color: "var(--text-primary)" }}
                 >
                   {CATEGORY_LABELS[cat]}
                 </span>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
-                    {catPaid}/{catEntries.length} paid
-                  </span>
-                  <span
-                    className="text-sm font-semibold tabular-nums"
-                    style={{ color: "var(--accent-orange)" }}
-                  >
-                    {fmt(catTotal)}
-                  </span>
-                </div>
+                {/* paid count — aligns with due-date column */}
+                <span className="text-xs w-16 text-right shrink-0" style={{ color: "var(--text-secondary)" }}>
+                  {catPaid}/{catEntries.length} paid
+                </span>
+                {/* total — aligns with amount column */}
+                <span
+                  className="text-sm font-semibold tabular-nums w-24 text-right shrink-0"
+                  style={{ color: "var(--accent-orange)" }}
+                >
+                  {fmt(catTotal)}
+                </span>
+                {/* delete-button placeholder */}
+                <span className="w-[13px] shrink-0" />
               </div>
 
               {/* Rows */}
@@ -611,14 +617,14 @@ export default function FinanceDashboard() {
                     {/* Paid checkbox */}
                     <button
                       onClick={() => !isArchived && togglePaid(entry.id, entry.isPaid)}
-                      className="shrink-0 flex items-center justify-center w-5 h-5 rounded transition-all"
+                      className={`shrink-0 flex items-center justify-center w-5 h-5 rounded transition-all${!isArchived ? " hover:scale-110 hover:brightness-125" : ""}`}
                       style={{
                         border: `1.5px solid ${entry.isPaid ? "#4ade80" : "var(--bg-400)"}`,
                         backgroundColor: entry.isPaid ? "#4ade8025" : "transparent",
                         cursor: isArchived ? "default" : "pointer",
                         opacity: isArchived ? 0.6 : 1,
                       }}
-                      title={isArchived ? undefined : entry.isPaid ? "Mark unpaid" : "Mark paid"}
+                      title={isArchived ? "Month is locked" : entry.isPaid ? "Mark as unpaid" : "Mark as paid"}
                     >
                       {entry.isPaid && <Check size={11} style={{ color: "#4ade80" }} />}
                     </button>
@@ -637,10 +643,11 @@ export default function FinanceDashboard() {
 
                     {/* Pay day */}
                     <span
-                      className="text-xs w-10 text-right shrink-0"
+                      className="text-xs w-16 text-right shrink-0"
                       style={{ color: "var(--text-secondary)" }}
+                      title={entry.payDay ? `Due on the ${ordinal(entry.payDay)}` : undefined}
                     >
-                      {entry.payDay ? ordinal(entry.payDay) : "—"}
+                      {entry.payDay ? `due ${ordinal(entry.payDay)}` : "—"}
                     </span>
 
                     {/* Amount — inline editable (disabled when archived) */}
@@ -671,15 +678,12 @@ export default function FinanceDashboard() {
                               [entry.id]: parseFloat(entry.amount).toFixed(2),
                             }))
                           }
-                          className="text-sm font-medium tabular-nums"
+                          className={`text-sm font-medium tabular-nums transition-opacity${!isArchived ? " hover:opacity-70 hover:underline" : ""}`}
                           style={{
                             color: "var(--text-primary)",
                             cursor: isArchived ? "default" : "pointer",
-                            textDecoration: isArchived ? "none" : undefined,
                           }}
-                          onMouseEnter={(e) => { if (!isArchived) e.currentTarget.style.textDecoration = "underline"; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.textDecoration = "none"; }}
-                          title={isArchived ? undefined : "Click to edit"}
+                          title={isArchived ? "Month is locked" : "Click to edit amount"}
                         >
                           {fmt(entry.amount)}
                         </button>
@@ -692,9 +696,7 @@ export default function FinanceDashboard() {
                         onClick={() => deleteEntry(entry.id, entry.name)}
                         className="shrink-0 opacity-0 hover:opacity-80 transition-opacity"
                         style={{ color: "#f87171" }}
-                        title="Remove"
-                        onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
-                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0")}
+                        title={`Remove "${entry.name}"`}
                       >
                         <Trash2 size={13} />
                       </button>
