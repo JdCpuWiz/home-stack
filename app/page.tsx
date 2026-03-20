@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Package, CheckSquare, ShoppingCart, UtensilsCrossed, Truck, Mail } from "lucide-react";
+import { Package, CheckSquare, ShoppingCart, UtensilsCrossed, Truck, Mail, DollarSign } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,10 @@ export default async function DashboardPage() {
   if (!session) redirect("/login");
 
   const now = new Date();
-  const [toteCount, todoCount, overdueCount, activeGroceryLists, recipeCount, activePackageCount, outForDeliveryCount, todayDigest] = await Promise.all([
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  const [toteCount, todoCount, overdueCount, activeGroceryLists, recipeCount, activePackageCount, outForDeliveryCount, todayDigest, financeMonth] = await Promise.all([
     prisma.tote.count(),
     prisma.todoItem.count(),
     prisma.todoItem.count({ where: { dueDate: { lt: now } } }),
@@ -28,7 +31,23 @@ export default async function DashboardPage() {
     prisma.package.count({ where: { delivered: false } }),
     prisma.package.count({ where: { status: "OUT_FOR_DELIVERY" } }),
     prisma.emailDigest.findFirst({ where: { clearedAt: null }, select: { totalCount: true } }),
+    prisma.financeMonth.findUnique({
+      where: { year_month: { year: currentYear, month: currentMonth } },
+      include: { entries: { select: { amount: true, isPaid: true } } },
+    }),
   ]);
+
+  const financeNetPay = financeMonth?.netPay ? parseFloat(financeMonth.netPay.toString()) : null;
+  const financeCommitted = financeMonth
+    ? financeMonth.entries.reduce((s, e) => s + parseFloat(e.amount.toString()), 0)
+    : null;
+  const financeBalance = financeNetPay != null && financeCommitted != null ? financeNetPay - financeCommitted : null;
+  const financePaid = financeMonth ? financeMonth.entries.filter((e) => e.isPaid).length : 0;
+  const financeTotal = financeMonth ? financeMonth.entries.length : 0;
+
+  function fmtCurrency(n: number) {
+    return n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  }
 
   return (
     <div>
@@ -167,6 +186,51 @@ export default async function DashboardPage() {
           </div>
           <Link href="/email-digest" className="text-sm" style={{ color: "var(--text-secondary)" }}>
             View Digest →
+          </Link>
+        </div>
+
+        {/* Finance */}
+        <div className="card flex flex-col gap-3">
+          <div className="flex items-center gap-2" style={{ color: "var(--accent-orange)" }}>
+            <DollarSign size={20} />
+            <span className="font-semibold">Finance</span>
+          </div>
+          {financeMonth ? (
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between text-sm">
+                <span style={{ color: "var(--text-secondary)" }}>Net Pay</span>
+                <span style={{ color: financeNetPay != null ? "#4ade80" : "var(--text-secondary)" }}>
+                  {financeNetPay != null ? fmtCurrency(financeNetPay) : "—"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span style={{ color: "var(--text-secondary)" }}>Committed</span>
+                <span style={{ color: "var(--accent-orange)" }}>
+                  {financeCommitted != null ? fmtCurrency(financeCommitted) : "—"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span style={{ color: "var(--text-secondary)" }}>Balance</span>
+                <span style={{
+                  color: financeBalance != null
+                    ? financeBalance >= 0 ? "#4ade80" : "#f87171"
+                    : "var(--text-secondary)",
+                  fontWeight: 600,
+                }}>
+                  {financeBalance != null ? fmtCurrency(financeBalance) : "—"}
+                </span>
+              </div>
+              <div className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>
+                {financePaid}/{financeTotal} paid
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+              No data for this month
+            </p>
+          )}
+          <Link href="/finance" className="text-sm" style={{ color: "var(--text-secondary)" }}>
+            View Budget →
           </Link>
         </div>
       </div>
