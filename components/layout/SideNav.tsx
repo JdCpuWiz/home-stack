@@ -160,8 +160,8 @@ export default function SideNav({ open, onClose }: Props) {
           className="relative flex items-center justify-center px-4 py-4 shrink-0"
           style={{ borderBottom: "1px solid var(--bg-200)" }}
         >
-          <Link href="/" onClick={onClose} aria-label="HomeStack home">
-            <img src="/logo.png" alt="HomeStack" style={{ width: "172px", height: "auto", borderRadius: "6px" }} />
+          <Link href="/" onClick={onClose} aria-label="HomeStack home" className="block w-full">
+            <img src="/logo.png" alt="HomeStack" style={{ width: "100%", height: "auto", borderRadius: "6px" }} />
           </Link>
           <button className="md:hidden btn-secondary btn-sm p-1.5 absolute right-3 top-1/2 -translate-y-1/2" onClick={onClose} aria-label="Close menu">
             <X size={16} />
