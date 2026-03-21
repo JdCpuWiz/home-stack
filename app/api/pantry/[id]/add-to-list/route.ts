@@ -45,16 +45,13 @@ export async function POST(
     return NextResponse.json({ error: "Item already on this list" }, { status: 409 });
   }
 
-  // Resolve pantry category → grocery area (find or create)
+  // Try to match pantry category to an existing grocery area by name (no auto-create)
   let areaId: number | null = null;
   if (product.category) {
-    let area = await prisma.groceryArea.findFirst({
+    const area = await prisma.groceryArea.findFirst({
       where: { name: { equals: product.category, mode: "insensitive" } },
     });
-    if (!area) {
-      area = await prisma.groceryArea.create({ data: { name: product.category } });
-    }
-    areaId = area.id;
+    if (area) areaId = area.id;
   }
 
   const maxPos = await prisma.groceryListItem.aggregate({
