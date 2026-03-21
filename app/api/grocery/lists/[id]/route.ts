@@ -13,7 +13,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     include: {
       store: true,
       items: {
-        include: { area: true },
         orderBy: { position: "asc" },
       },
     },
