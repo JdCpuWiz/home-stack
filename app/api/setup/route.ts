@@ -2,11 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-const DEFAULT_AREAS = [
-  "Produce", "Meat", "Dairy", "Frozen", "Bakery",
-  "Deli", "Canned Goods", "Beverages", "Snacks", "Household", "Personal Care",
-];
-
 // GET /api/setup — check if setup is needed
 export async function GET() {
   const count = await prisma.user.count();
@@ -47,15 +42,6 @@ export async function POST(request: NextRequest) {
     },
     select: { id: true, username: true, email: true, role: true },
   });
-
-  // Seed default grocery areas so the app is useful immediately
-  for (let i = 0; i < DEFAULT_AREAS.length; i++) {
-    await prisma.groceryArea.upsert({
-      where: { name: DEFAULT_AREAS[i] },
-      update: {},
-      create: { name: DEFAULT_AREAS[i], position: i },
-    });
-  }
 
   return NextResponse.json({ ok: true, user }, { status: 201 });
 }
