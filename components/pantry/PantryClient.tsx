@@ -220,10 +220,12 @@ function EditProductModal({
   product,
   onClose,
   onSaved,
+  availableCategories,
 }: {
   product: PantryProduct;
   onClose: () => void;
   onSaved: (updated: PantryProduct) => void;
+  availableCategories: string[];
 }) {
   const [name, setName] = useState(product.name);
   const [brand, setBrand] = useState(product.brand ?? "");
@@ -287,7 +289,16 @@ function EditProductModal({
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold" style={{ color: "var(--text-secondary)" }}>Category</label>
-            <input className="input" placeholder="e.g. Cleaning, Paper Products…" value={category} onChange={(e) => setCategory(e.target.value)} />
+            <select
+              className="input"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value="">Uncategorized</option>
+              {availableCategories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
           </div>
           <div className="flex gap-3">
             <div className="flex flex-col gap-1 flex-1">
@@ -596,8 +607,15 @@ function ProductRow({
 
 // ─── Main component ───────────────────────────────────────────────
 
-export default function PantryClient({ initialProducts }: { initialProducts: PantryProduct[] }) {
+export default function PantryClient({
+  initialProducts,
+  initialCategories,
+}: {
+  initialProducts: PantryProduct[];
+  initialCategories: string[];
+}) {
   const [products, setProducts] = useState<PantryProduct[]>(initialProducts);
+  const [categories, setCategories] = useState<string[]>(initialCategories);
   const [scanMode, setScanMode] = useState<ScanMode>("in");
   const [barcodeInput, setBarcodeInput] = useState("");
   const [scanning, setScanning] = useState(false);
@@ -609,6 +627,14 @@ export default function PantryClient({ initialProducts }: { initialProducts: Pan
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
   const [search, setSearch] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Keep category list fresh when returning from settings
+  useEffect(() => {
+    fetch("/api/pantry/categories")
+      .then((r) => r.json())
+      .then((data: { name: string }[]) => setCategories(data.map((c) => c.name)))
+      .catch(() => {});
+  }, []);
 
   const attentionProducts = products
     .filter(needsAttention)
@@ -907,6 +933,7 @@ export default function PantryClient({ initialProducts }: { initialProducts: Pan
           product={editingProduct}
           onClose={() => setEditingProduct(null)}
           onSaved={handleEditSaved}
+          availableCategories={categories}
         />
       )}
       {addingToList && (

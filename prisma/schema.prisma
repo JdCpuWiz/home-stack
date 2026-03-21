@@ -243,6 +243,13 @@ model FinanceBudgetEntry {
 }
 
 // ─── Pantry ───────────────────────────────────────────────────────
+model PantryCategory {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
 model PantryProduct {
   id        Int      @id @default(autoincrement())
   barcode   String   @unique

@@ -296,6 +296,7 @@ export default function SideNav({ open, onClose }: Props) {
                   <NavLink href="/settings/grocery" label="Grocery Settings" icon={<Settings size={15} />} onClick={onClose} />
                   <NavLink href="/settings/email-digest" label="Email Settings" icon={<Mail size={15} />} onClick={onClose} />
                   <NavLink href="/settings/finance" label="Finance Settings" icon={<DollarSign size={15} />} onClick={onClose} />
+                  <NavLink href="/settings/pantry" label="Pantry Settings" icon={<ScanLine size={15} />} onClick={onClose} />
                 </>
               )}
             </>
