@@ -30,7 +30,7 @@ export default async function DashboardPage() {
     prisma.pantryProduct.findMany({ select: { quantity: true, minQty: true } })
       .then((items) => ({
         total: items.length,
-        lowCount: items.filter((p) => p.quantity <= p.minQty).length,
+        lowCount: items.filter((p) => p.quantity === 0 || (p.minQty > 0 && p.quantity <= p.minQty)).length,
       }))
       .catch(() => ({ total: 0, lowCount: 0 })),
     prisma.recipe.count(),

@@ -36,8 +36,16 @@ type ScanMode = "in" | "out";
 
 // ─── Helpers ──────────────────────────────────────────────────────
 
+function isOutOfStock(p: PantryProduct) {
+  return p.quantity === 0;
+}
+
 function isLowStock(p: PantryProduct) {
-  return p.minQty > 0 && p.quantity <= p.minQty;
+  return p.quantity > 0 && p.minQty > 0 && p.quantity <= p.minQty;
+}
+
+function needsAttention(p: PantryProduct) {
+  return isOutOfStock(p) || isLowStock(p);
 }
 
 function ProductPhoto({ url, name, size = 48 }: { url: string | null; name: string; size?: number }) {
@@ -459,6 +467,7 @@ function ProductRow({
   onAddToList: () => void;
   onQtyChange: (newQty: number) => void;
 }) {
+  const out = isOutOfStock(product);
   const low = isLowStock(product);
 
   async function adjustQty(delta: number) {
@@ -474,14 +483,21 @@ function ProductRow({
   return (
     <div
       className="card-surface rounded-xl p-3 flex items-center gap-3"
-      style={{ border: low ? "1px solid #854d0e" : "1px solid var(--bg-300)" }}
+      style={{ border: out ? "1px solid #991b1b" : low ? "1px solid #854d0e" : "1px solid var(--bg-300)" }}
     >
       <ProductPhoto url={product.photoUrl} name={product.name} size={44} />
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="font-semibold text-sm truncate">{product.name}</p>
-          {low && (
+          {out ? (
+            <span
+              className="text-xs font-semibold px-1.5 py-0.5 rounded shrink-0"
+              style={{ backgroundColor: "#b91c1c", color: "#fff" }}
+            >
+              Out
+            </span>
+          ) : low && (
             <span
               className="text-xs font-semibold px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0"
               style={{ backgroundColor: "#eab308", color: "#000" }}
@@ -507,7 +523,7 @@ function ProductRow({
         </button>
         <span
           className="text-sm font-bold text-center"
-          style={{ minWidth: "1.75rem", color: low ? "#eab308" : "var(--text-primary)" }}
+          style={{ minWidth: "1.75rem", color: out ? "#f87171" : low ? "#eab308" : "var(--text-primary)" }}
         >
           {product.quantity}
         </span>
@@ -563,7 +579,9 @@ export default function PantryClient({ initialProducts }: { initialProducts: Pan
   const [search, setSearch] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const lowStockProducts = products.filter(isLowStock);
+  const attentionProducts = products
+    .filter(needsAttention)
+    .sort((a, b) => (isOutOfStock(b) ? 1 : 0) - (isOutOfStock(a) ? 1 : 0));
   const filteredProducts = products.filter(
     (p) =>
       !search ||
@@ -745,17 +763,17 @@ export default function PantryClient({ initialProducts }: { initialProducts: Pan
         )}
       </div>
 
-      {/* Low stock section */}
-      {lowStockProducts.length > 0 && (
+      {/* Needs attention section */}
+      {attentionProducts.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle size={16} style={{ color: "#eab308" }} />
             <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color: "#eab308" }}>
-              Low Stock ({lowStockProducts.length})
+              Needs Attention ({attentionProducts.length})
             </h2>
           </div>
           <div className="flex flex-col gap-2">
-            {lowStockProducts.map((p) => (
+            {attentionProducts.map((p) => (
               <ProductRow
                 key={p.id}
                 product={p}
