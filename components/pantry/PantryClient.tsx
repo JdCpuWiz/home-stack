@@ -219,7 +219,7 @@ function EditProductModal({
         name: name.trim(),
         brand: brand.trim() || null,
         size: size.trim() || null,
-        minQty: parseInt(minQty) || 1,
+        minQty: Math.max(0, parseInt(minQty) || 0),
         quantity: parseInt(quantity) || 0,
       }),
     });
