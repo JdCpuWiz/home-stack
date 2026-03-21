@@ -45,6 +45,18 @@ export async function POST(
     return NextResponse.json({ error: "Item already on this list" }, { status: 409 });
   }
 
+  // Resolve pantry category → grocery area (find or create)
+  let areaId: number | null = null;
+  if (product.category) {
+    let area = await prisma.groceryArea.findFirst({
+      where: { name: { equals: product.category, mode: "insensitive" } },
+    });
+    if (!area) {
+      area = await prisma.groceryArea.create({ data: { name: product.category } });
+    }
+    areaId = area.id;
+  }
+
   const maxPos = await prisma.groceryListItem.aggregate({
     where: { listId: list.id },
     _max: { position: true },
@@ -58,6 +70,7 @@ export async function POST(
       quantity: product.size || null,
       purchased: false,
       position,
+      areaId,
     },
   });
   return NextResponse.json({ item, listId: list.id }, { status: 201 });
