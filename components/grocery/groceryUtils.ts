@@ -5,18 +5,10 @@ export type GroceryStore = {
   createdAt: string;
 };
 
-export type GroceryArea = {
-  id: number;
-  name: string;
-  position: number;
-  createdAt: string;
-};
-
 export type GroceryListItem = {
   id: number;
   listId: number;
-  areaId: number | null;
-  area: GroceryArea | null;
+  category: string | null;
   name: string;
   quantity: string | null;
   purchased: boolean;

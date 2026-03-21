@@ -75,14 +75,6 @@ model GroceryStore {
   lists     GroceryList[]
 }
 
-model GroceryArea {
-  id        Int               @id @default(autoincrement())
-  name      String            @unique
-  position  Int               @default(0)
-  createdAt DateTime          @default(now())
-  items     GroceryListItem[]
-}
-
 enum GroceryListStatus {
   ACTIVE
   COMPLETED
@@ -103,8 +95,7 @@ model GroceryListItem {
   id        Int          @id @default(autoincrement())
   listId    Int
   list      GroceryList  @relation(fields: [listId], references: [id], onDelete: Cascade)
-  areaId    Int?
-  area      GroceryArea? @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  category  String?
   name      String
   quantity  String?
   purchased Boolean      @default(false)

@@ -14,7 +14,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   const list = await prisma.groceryList.findUnique({
     where: { id: listId },
-    include: { store: true, items: { include: { area: true } } },
+    include: { store: true, items: true },
   });
   if (!list) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -26,7 +26,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
         create: list.items.map((item) => ({
           name: item.name,
           quantity: item.quantity,
-          areaName: item.area?.name ?? null,
+          areaName: item.category ?? null,
           purchased: item.purchased,
         })),
       },

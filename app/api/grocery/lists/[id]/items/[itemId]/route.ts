@@ -11,10 +11,10 @@ export async function PUT(
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { itemId } = await params;
-  const { name, quantity, areaId, purchased } = await request.json() as {
+  const { name, quantity, category, purchased } = await request.json() as {
     name?: string;
     quantity?: string | null;
-    areaId?: number | null;
+    category?: string | null;
     purchased?: boolean;
   };
 
@@ -23,10 +23,9 @@ export async function PUT(
     data: {
       ...(name !== undefined && { name: name.trim() }),
       ...(quantity !== undefined && { quantity: quantity?.trim() || null }),
-      ...(areaId !== undefined && { areaId }),
+      ...(category !== undefined && { category }),
       ...(purchased !== undefined && { purchased }),
     },
-    include: { area: true },
   });
   return NextResponse.json(item);
 }

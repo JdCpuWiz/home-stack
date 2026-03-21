@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 // POST /api/grocery/stores/[id]/items
 // Adds an item to the active list for this store (with duplicate check).
-// Body: { name, quantity?, areaName? }
+// Body: { name, quantity?, category? }
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -19,10 +19,10 @@ export async function POST(
   const store = await prisma.groceryStore.findUnique({ where: { id: storeId } });
   if (!store) return NextResponse.json({ error: "Store not found" }, { status: 404 });
 
-  const { name, quantity, areaName } = await request.json() as {
+  const { name, quantity, category } = await request.json() as {
     name: string;
     quantity?: string | null;
-    areaName?: string | null;
+    category?: string | null;
   };
   if (!name?.trim()) return NextResponse.json({ error: "Name is required" }, { status: 400 });
 
@@ -44,20 +44,13 @@ export async function POST(
   });
   if (existing) return NextResponse.json({ error: "Item already on list" }, { status: 409 });
 
-  // Resolve area by name
-  let areaId: number | null = null;
-  if (areaName) {
-    const area = await prisma.groceryArea.findFirst({ where: { name: areaName } });
-    if (area) areaId = area.id;
-  }
-
   const count = await prisma.groceryListItem.count({ where: { listId: list.id } });
   await prisma.groceryListItem.create({
     data: {
       listId: list.id,
       name: name.trim(),
       quantity: quantity?.trim() || null,
-      areaId,
+      category: category ?? null,
       position: count,
     },
   });

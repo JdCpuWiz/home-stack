@@ -2,18 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { GroceryStore, GroceryArea, GroceryList, GroceryListItem } from "./groceryUtils";
+import { GroceryList, GroceryStore, GroceryListItem } from "./groceryUtils";
 import { useGroceryActions } from "./GroceryActionsContext";
 import AddItemDialog from "./AddItemDialog";
 
 type Props = {
   list: GroceryList;
   store: GroceryStore;
-  areas: GroceryArea[];
+  categories: string[];
   suggestions: string[];
 };
 
-export default function GroceryListView({ list, store, areas, suggestions }: Props) {
+export default function GroceryListView({ list, store, categories, suggestions }: Props) {
   const router = useRouter();
   const { register, unregister } = useGroceryActions();
   // Only show unpurchased items — purchased ones are checked off and hidden
@@ -31,10 +31,10 @@ export default function GroceryListView({ list, store, areas, suggestions }: Pro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store.name, completing]);
 
-  // Group by area, sort alphabetically (no-area last)
+  // Group by category, sort alphabetically (no-category last)
   const groups = new Map<string, GroceryListItem[]>();
   for (const item of items) {
-    const key = item.area?.name ?? "__none__";
+    const key = item.category ?? "__none__";
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(item);
   }
@@ -111,7 +111,7 @@ export default function GroceryListView({ list, store, areas, suggestions }: Pro
                 className="text-sm font-semibold uppercase tracking-wider pb-1 mb-1"
                 style={{ color: "var(--accent-orange)", borderBottom: "1px solid var(--bg-300)" }}
               >
-                {key === "__none__" ? "No Area" : key}
+                {key === "__none__" ? "No Category" : key}
               </div>
               {groups.get(key)!.map((item, idx) => (
                 <div
@@ -180,7 +180,7 @@ export default function GroceryListView({ list, store, areas, suggestions }: Pro
       {(showAdd || editItem) && (
         <AddItemDialog
           listId={list.id}
-          areas={areas}
+          categories={categories}
           suggestions={suggestions}
           item={editItem ?? undefined}
           onSave={handleSaved}

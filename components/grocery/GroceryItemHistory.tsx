@@ -21,7 +21,7 @@ export default function GroceryItemHistory({ initialItems, stores }: Props) {
   const [addedMsg, setAddedMsg] = useState<Map<string, string>>(new Map()); // name → message
   const [deleting, setDeleting] = useState<Set<string>>(new Set());
 
-  // Group by area, no-area last
+  // Group by category, no-category last
   const groups = new Map<string, HistoryItem[]>();
   for (const item of items) {
     const key = item.areaName ?? "__none__";
@@ -45,7 +45,7 @@ export default function GroceryItemHistory({ initialItems, stores }: Props) {
     const res = await fetch(`/api/grocery/stores/${selectedStoreId}/items`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: item.name, quantity: item.quantity, areaName: item.areaName }),
+      body: JSON.stringify({ name: item.name, quantity: item.quantity, category: item.areaName }),
     });
 
     const msg = res.status === 409 ? "Already on list" : res.ok ? "Added ✓" : "Error";
@@ -132,7 +132,7 @@ export default function GroceryItemHistory({ initialItems, stores }: Props) {
                   className="text-sm font-semibold uppercase tracking-wider pb-1 mb-1"
                   style={{ color: "var(--accent-orange)", borderBottom: "1px solid var(--bg-300)" }}
                 >
-                  {key === "__none__" ? "No Area" : key}
+                  {key === "__none__" ? "No Category" : key}
                 </div>
                 <div className="flex flex-col gap-1">
                   {groups.get(key)!.map((item) => {

@@ -1,21 +1,21 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { GroceryArea, GroceryListItem } from "./groceryUtils";
+import { GroceryListItem } from "./groceryUtils";
 
 type Props = {
   listId: number;
-  areas: GroceryArea[];
+  categories: string[];
   suggestions: string[];
   item?: GroceryListItem;
   onSave: (item: GroceryListItem) => void;
   onClose: () => void;
 };
 
-export default function AddItemDialog({ listId, areas, suggestions, item, onSave, onClose }: Props) {
+export default function AddItemDialog({ listId, categories, suggestions, item, onSave, onClose }: Props) {
   const [name, setName] = useState(item?.name ?? "");
   const [quantity, setQuantity] = useState(item?.quantity ?? "");
-  const [areaId, setAreaId] = useState<string>(item?.areaId?.toString() ?? "");
+  const [category, setCategory] = useState<string>(item?.category ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
@@ -28,7 +28,7 @@ export default function AddItemDialog({ listId, areas, suggestions, item, onSave
     const body = {
       name: name.trim(),
       quantity: quantity.trim() || null,
-      areaId: areaId ? parseInt(areaId) : null,
+      category: category || null,
     };
 
     const res = item
@@ -102,18 +102,16 @@ export default function AddItemDialog({ listId, areas, suggestions, item, onSave
 
           <div>
             <label className="text-xs font-medium mb-1 block" style={{ color: "var(--text-secondary)" }}>
-              Area
+              Category
             </label>
             <select
               className="input w-full"
-              value={areaId}
-              onChange={(e) => setAreaId(e.target.value)}
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
             >
-              <option value="">— No area —</option>
-              {areas.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
+              <option value="">— No category —</option>
+              {[...categories].sort((a, b) => a.localeCompare(b)).map((c) => (
+                <option key={c} value={c}>{c}</option>
               ))}
             </select>
           </div>

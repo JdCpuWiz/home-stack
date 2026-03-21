@@ -10,10 +10,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const { id } = await params;
   const listId = parseInt(id);
-  const { name, quantity, areaId } = await request.json() as {
+  const { name, quantity, category } = await request.json() as {
     name: string;
     quantity?: string;
-    areaId?: number | null;
+    category?: string | null;
   };
 
   if (!name?.trim()) return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -34,10 +34,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       listId,
       name: name.trim(),
       quantity: quantity?.trim() || null,
-      areaId: areaId ?? null,
+      category: category ?? null,
       position: count,
     },
-    include: { area: true },
   });
   return NextResponse.json(item, { status: 201 });
 }

@@ -3,7 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import GroceryListView from "@/components/grocery/GroceryListView";
-import { GroceryList, GroceryStore, GroceryArea } from "@/components/grocery/groceryUtils";
+import { GroceryList, GroceryStore } from "@/components/grocery/groceryUtils";
 
 export default async function GroceryStorePage({
   params,
@@ -19,14 +19,16 @@ export default async function GroceryStorePage({
   const store = await prisma.groceryStore.findUnique({ where: { id } });
   if (!store) notFound();
 
-  const areas = await prisma.groceryArea.findMany({ orderBy: { position: "asc" } });
+  // Fetch pantry categories for the category picker
+  const pantryCategories = await prisma.pantryCategory.findMany({ orderBy: { name: "asc" } });
+  const categories = pantryCategories.map((c) => c.name);
 
   // Fetch or auto-create active list
   let list = await prisma.groceryList.findFirst({
     where: { storeId: id, status: "ACTIVE" },
     include: {
       store: true,
-      items: { include: { area: true }, orderBy: { position: "asc" } },
+      items: { orderBy: { position: "asc" } },
     },
   });
 
@@ -35,7 +37,7 @@ export default async function GroceryStorePage({
       data: { storeId: id },
       include: {
         store: true,
-        items: { include: { area: true }, orderBy: { position: "asc" } },
+        items: { orderBy: { position: "asc" } },
       },
     });
   }
@@ -58,7 +60,7 @@ export default async function GroceryStorePage({
     <GroceryListView
       list={list as unknown as GroceryList}
       store={store as unknown as GroceryStore}
-      areas={areas as unknown as GroceryArea[]}
+      categories={categories}
       suggestions={suggestions}
     />
   );

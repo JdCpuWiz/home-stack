@@ -33,25 +33,15 @@ export async function POST(
     activeList = await prisma.groceryList.create({ data: { storeId } });
   }
 
-  // Resolve area by name if present
-  let areaId: number | null = null;
-  if (tripItem.areaName) {
-    const area = await prisma.groceryArea.findFirst({
-      where: { name: tripItem.areaName },
-    });
-    if (area) areaId = area.id;
-  }
-
   const count = await prisma.groceryListItem.count({ where: { listId: activeList.id } });
   const newItem = await prisma.groceryListItem.create({
     data: {
       listId: activeList.id,
       name: tripItem.name,
       quantity: tripItem.quantity ?? null,
-      areaId,
+      category: tripItem.areaName ?? null,
       position: count,
     },
-    include: { area: true },
   });
 
   return NextResponse.json({ item: newItem, storeId }, { status: 201 });
