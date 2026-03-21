@@ -128,12 +128,15 @@ export default function GroceryListView({ list, store, categories, suggestions }
                     className="w-5 h-5 shrink-0 rounded-full border-2 flex items-center justify-center"
                     style={{ borderColor: "var(--bg-400)", backgroundColor: "transparent" }}
                   />
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
                       {item.name}
                     </span>
                     {item.quantity && (
-                      <span className="text-xs ml-2" style={{ color: "var(--text-secondary)" }}>
+                      <span
+                        className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
+                        style={{ backgroundColor: "var(--bg-400)", color: "var(--accent-orange)" }}
+                      >
                         {item.quantity}
                       </span>
                     )}
