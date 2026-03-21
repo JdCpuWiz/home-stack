@@ -157,7 +157,7 @@ export default function SideNav({ open, onClose }: Props) {
       >
         {/* Brand + mobile close */}
         <div
-          className="relative flex items-center justify-center px-4 py-4 shrink-0"
+          className="relative flex items-center justify-center py-4 shrink-0"
           style={{ borderBottom: "1px solid var(--bg-200)" }}
         >
           <Link href="/" onClick={onClose} aria-label="HomeStack home" className="block w-full">
