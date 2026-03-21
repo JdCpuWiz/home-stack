@@ -247,7 +247,7 @@ function EditProductModal({
               onChange={(e) => setCategory(e.target.value)}
             >
               <option value="">Uncategorized</option>
-              {availableCategories.map((c) => (
+              {[...availableCategories].sort((a, b) => a.localeCompare(b)).map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
