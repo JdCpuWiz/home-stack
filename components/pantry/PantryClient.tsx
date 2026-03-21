@@ -582,12 +582,35 @@ export default function PantryClient({ initialProducts }: { initialProducts: Pan
   const attentionProducts = products
     .filter(needsAttention)
     .sort((a, b) => (isOutOfStock(b) ? 1 : 0) - (isOutOfStock(a) ? 1 : 0));
+
   const filteredProducts = products.filter(
     (p) =>
       !search ||
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       (p.brand && p.brand.toLowerCase().includes(search.toLowerCase()))
   );
+
+  // Group filtered products by category, alphabetized within each group
+  const groupedProducts: { category: string; items: PantryProduct[] }[] = (() => {
+    const map = new Map<string, PantryProduct[]>();
+    for (const p of filteredProducts) {
+      const key = p.category?.trim() || "Uncategorized";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(p);
+    }
+    // Sort items within each group alphabetically
+    for (const items of map.values()) {
+      items.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    // Sort categories alphabetically, Uncategorized last
+    return [...map.entries()]
+      .sort(([a], [b]) => {
+        if (a === "Uncategorized") return 1;
+        if (b === "Uncategorized") return -1;
+        return a.localeCompare(b);
+      })
+      .map(([category, items]) => ({ category, items }));
+  })();
 
   function showToast(msg: string, type: "ok" | "err" = "ok") {
     setToast({ msg, type });
@@ -787,7 +810,7 @@ export default function PantryClient({ initialProducts }: { initialProducts: Pan
         </div>
       )}
 
-      {/* All items */}
+      {/* All items — grouped by category */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-bold uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>
@@ -811,16 +834,34 @@ export default function PantryClient({ initialProducts }: { initialProducts: Pan
               : "No products match your search"}
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
-            {filteredProducts.map((p) => (
-              <ProductRow
-                key={p.id}
-                product={p}
-                onEdit={() => setEditingProduct(p)}
-                onDelete={() => handleDelete(p)}
-                onAddToList={() => setAddingToList(p)}
-                onQtyChange={(qty) => handleQtyChange(p.id, qty)}
-              />
+          <div className="flex flex-col gap-6">
+            {groupedProducts.map(({ category, items }) => (
+              <div key={category}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span
+                    className="text-xs font-bold uppercase tracking-wider"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    {category}
+                  </span>
+                  <div className="flex-1 h-px" style={{ backgroundColor: "var(--bg-300)" }} />
+                  <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                    {items.length}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {items.map((p) => (
+                    <ProductRow
+                      key={p.id}
+                      product={p}
+                      onEdit={() => setEditingProduct(p)}
+                      onDelete={() => handleDelete(p)}
+                      onAddToList={() => setAddingToList(p)}
+                      onQtyChange={(qty) => handleQtyChange(p.id, qty)}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         )}
