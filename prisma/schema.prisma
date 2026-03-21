@@ -242,6 +242,21 @@ model FinanceBudgetEntry {
   updatedAt DateTime           @updatedAt
 }
 
+// ─── Pantry ───────────────────────────────────────────────────────
+model PantryProduct {
+  id        Int      @id @default(autoincrement())
+  barcode   String   @unique
+  name      String
+  brand     String?
+  size      String?
+  photoUrl  String?
+  category  String?
+  quantity  Int      @default(0)
+  minQty    Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // ─── Recipes ──────────────────────────────────────────────────────
 model Recipe {
   id          Int                @id @default(autoincrement())

@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import {
   Package, Plus, CheckSquare, Search, Users, X, ShoppingCart, History,
   Settings, CheckCheck, LogOut, LogIn, List, Trash2, UtensilsCrossed,
-  LayoutDashboard, Truck, Mail, DollarSign, ChevronDown,
+  LayoutDashboard, Truck, Mail, DollarSign, ChevronDown, ScanLine,
 } from "lucide-react";
 import { useGroceryActions } from "@/components/grocery/GroceryActionsContext";
 
@@ -128,6 +128,7 @@ export default function SideNav({ open, onClose }: Props) {
     finance: false,
     recipes: false,
     grocery: false,
+    pantry: false,
     settings: false,
   });
 
@@ -273,6 +274,15 @@ export default function SideNav({ open, onClose }: Props) {
                     />
                   )}
                 </>
+              )}
+            </>
+          )}
+
+          {session && (
+            <>
+              <SectionHeader label="Pantry" sectionKey="pantry" open={sections.pantry} onToggle={toggleSection} />
+              {sections.pantry && (
+                <NavLink href="/pantry" label="Inventory" icon={<ScanLine size={15} />} exact onClick={onClose} />
               )}
             </>
           )}

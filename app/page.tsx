@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Package, CheckSquare, ShoppingCart, UtensilsCrossed, Truck, Mail, DollarSign } from "lucide-react";
+import { Package, CheckSquare, ShoppingCart, UtensilsCrossed, Truck, Mail, DollarSign, ScanLine, AlertTriangle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +15,7 @@ export default async function DashboardPage() {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  const [toteCount, todoCount, overdueCount, activeGroceryLists, recipeCount, activePackageCount, outForDeliveryCount, todayDigest, financeMonth] = await Promise.all([
+  const [toteCount, todoCount, overdueCount, activeGroceryLists, pantryStats, recipeCount, activePackageCount, outForDeliveryCount, todayDigest, financeMonth] = await Promise.all([
     prisma.tote.count(),
     prisma.todoItem.count(),
     prisma.todoItem.count({ where: { dueDate: { lt: now } } }),
@@ -27,6 +27,12 @@ export default async function DashboardPage() {
       },
       orderBy: { store: { position: "asc" } },
     }),
+    prisma.pantryProduct.findMany({ select: { quantity: true, minQty: true } })
+      .then((items) => ({
+        total: items.length,
+        lowCount: items.filter((p) => p.quantity <= p.minQty).length,
+      }))
+      .catch(() => ({ total: 0, lowCount: 0 })),
     prisma.recipe.count(),
     prisma.package.count({ where: { delivered: false } }),
     prisma.package.count({ where: { status: "OUT_FOR_DELIVERY" } }),
@@ -124,17 +130,28 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        {/* Recipes */}
+        {/* Pantry */}
         <div className="card flex flex-col gap-3">
           <div className="flex items-center gap-2" style={{ color: "var(--accent-orange)" }}>
-            <UtensilsCrossed size={20} />
-            <span className="font-semibold">Recipes</span>
+            <ScanLine size={20} />
+            <span className="font-semibold">Pantry</span>
           </div>
-          <div className="text-4xl font-bold" style={{ color: "var(--accent-orange)" }}>
-            {recipeCount}
+          <div className="flex items-center gap-3">
+            <span className="text-4xl font-bold" style={{ color: "var(--accent-orange)" }}>
+              {pantryStats.total}
+            </span>
+            {pantryStats.lowCount > 0 && (
+              <span
+                className="text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1"
+                style={{ backgroundColor: "#eab308", color: "#000" }}
+              >
+                <AlertTriangle size={10} />
+                {pantryStats.lowCount} low
+              </span>
+            )}
           </div>
-          <Link href="/recipes" className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            All Recipes →
+          <Link href="/pantry" className="text-sm" style={{ color: "var(--text-secondary)" }}>
+            View Inventory →
           </Link>
         </div>
 
@@ -231,6 +248,20 @@ export default async function DashboardPage() {
           )}
           <Link href="/finance" className="text-sm" style={{ color: "var(--text-secondary)" }}>
             View Budget →
+          </Link>
+        </div>
+
+        {/* Recipes */}
+        <div className="card flex flex-col gap-3">
+          <div className="flex items-center gap-2" style={{ color: "var(--accent-orange)" }}>
+            <UtensilsCrossed size={20} />
+            <span className="font-semibold">Recipes</span>
+          </div>
+          <div className="text-4xl font-bold" style={{ color: "var(--accent-orange)" }}>
+            {recipeCount}
+          </div>
+          <Link href="/recipes" className="text-sm" style={{ color: "var(--text-secondary)" }}>
+            All Recipes →
           </Link>
         </div>
       </div>

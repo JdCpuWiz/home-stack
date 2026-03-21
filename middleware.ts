@@ -16,6 +16,6 @@ export default withAuth(
 // Protected: everything else
 export const config = {
   matcher: [
-    "/((?!login|setup|api/setup|search|api/search|api/auth|api/packages|api/todos|api/email-digest|totes/[^/]+$|_next/static|_next/image|favicon.ico|public).*)",
+    "/((?!login|setup|api/setup|search|api/search|api/auth|api/packages|api/todos|api/email-digest|api/pantry|totes/[^/]+$|_next/static|_next/image|favicon.ico|public).*)",
   ],
 };
