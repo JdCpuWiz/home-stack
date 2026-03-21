@@ -840,7 +840,7 @@ export default function PantryClient({ initialProducts }: { initialProducts: Pan
                 <div className="flex items-center gap-2 mb-2">
                   <span
                     className="text-xs font-bold uppercase tracking-wider"
-                    style={{ color: "var(--text-secondary)" }}
+                    style={{ color: "var(--accent-orange)" }}
                   >
                     {category}
                   </span>
