@@ -203,6 +203,7 @@ function EditProductModal({
   const [name, setName] = useState(product.name);
   const [brand, setBrand] = useState(product.brand ?? "");
   const [size, setSize] = useState(product.size ?? "");
+  const [category, setCategory] = useState(product.category ?? "");
   const [minQty, setMinQty] = useState(String(product.minQty));
   const [quantity, setQuantity] = useState(String(product.quantity));
   const [submitting, setSubmitting] = useState(false);
@@ -219,6 +220,7 @@ function EditProductModal({
         name: name.trim(),
         brand: brand.trim() || null,
         size: size.trim() || null,
+        category: category.trim() || null,
         minQty: Math.max(0, parseInt(minQty) || 0),
         quantity: parseInt(quantity) || 0,
       }),
@@ -257,6 +259,10 @@ function EditProductModal({
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold" style={{ color: "var(--text-secondary)" }}>Size / Weight</label>
             <input className="input" value={size} onChange={(e) => setSize(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold" style={{ color: "var(--text-secondary)" }}>Category</label>
+            <input className="input" placeholder="e.g. Cleaning, Paper Products…" value={category} onChange={(e) => setCategory(e.target.value)} />
           </div>
           <div className="flex gap-3">
             <div className="flex flex-col gap-1 flex-1">
@@ -845,9 +851,6 @@ export default function PantryClient({ initialProducts }: { initialProducts: Pan
                     {category}
                   </span>
                   <div className="flex-1 h-px" style={{ backgroundColor: "var(--bg-300)" }} />
-                  <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
-                    {items.length}
-                  </span>
                 </div>
                 <div className="flex flex-col gap-2">
                   {items.map((p) => (
