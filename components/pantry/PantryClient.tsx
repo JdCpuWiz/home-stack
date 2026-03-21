@@ -4,6 +4,9 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import {
   Camera, ShoppingCart, Pencil, Trash2, AlertTriangle,
   Plus, Minus, Check, X, ScanLine, Package,
+  UtensilsCrossed, Droplets, Sparkles, Pill, Coffee,
+  Leaf, Milk, Cookie, Snowflake, Wine, Shirt, Baby,
+  PawPrint, Apple, Fish, Sandwich, Home,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 
@@ -48,7 +51,29 @@ function needsAttention(p: PantryProduct) {
   return isOutOfStock(p) || isLowStock(p);
 }
 
-function ProductPhoto({ url, name, size = 48 }: { url: string | null; name: string; size?: number }) {
+function categoryIcon(category: string | null, iconSize: number) {
+  const c = (category ?? "").toLowerCase();
+  if (/clean|dish|laundry|detergent|bleach|scrub|mop|sponge|wipe/.test(c))   return <Sparkles size={iconSize} />;
+  if (/paper|tissue|towel|napkin|toilet/.test(c))                             return <Shirt size={iconSize} />;
+  if (/health|beauty|personal|vitamin|supplement|medicine|pill|drug|pharmacy|first aid|oral|dental|skin|hair|body wash|shampoo|soap/.test(c)) return <Pill size={iconSize} />;
+  if (/baby|infant|diaper|formula/.test(c))                                  return <Baby size={iconSize} />;
+  if (/pet|dog|cat|bird|fish food/.test(c))                                  return <PawPrint size={iconSize} />;
+  if (/dairy|milk|cheese|yogurt|butter|cream/.test(c))                       return <Milk size={iconSize} />;
+  if (/beverage|drink|juice|water|soda|coffee|tea|alcohol|wine|beer|spirit/.test(c)) return <Coffee size={iconSize} />;
+  if (/wine|beer|spirit|liquor/.test(c))                                     return <Wine size={iconSize} />;
+  if (/frozen/.test(c))                                                       return <Snowflake size={iconSize} />;
+  if (/produce|fruit|vegetable|fresh/.test(c))                               return <Apple size={iconSize} />;
+  if (/seafood|fish|meat|poultry|deli/.test(c))                              return <Fish size={iconSize} />;
+  if (/snack|chip|cracker|cookie|candy|sweet|confection|cereal|bread|bak/.test(c)) return <Cookie size={iconSize} />;
+  if (/sandwich|lunch|deli|prepared|meal/.test(c))                           return <Sandwich size={iconSize} />;
+  if (/spice|condiment|sauce|oil|vinegar|pasta|grain|rice|bean|canned|jar/.test(c)) return <UtensilsCrossed size={iconSize} />;
+  if (/organic|natural|herb|plant/.test(c))                                  return <Leaf size={iconSize} />;
+  if (/household|home|storage|bag|wrap|foil/.test(c))                        return <Home size={iconSize} />;
+  if (/drop|spray|liquid/.test(c))                                           return <Droplets size={iconSize} />;
+  return <Package size={iconSize} />;
+}
+
+function ProductPhoto({ url, name, size = 48, category = null }: { url: string | null; name: string; size?: number; category?: string | null }) {
   const [loaded, setLoaded] = useState(false);
   const [errored, setErrored] = useState(false);
   const showImg = url && !errored;
@@ -58,8 +83,8 @@ function ProductPhoto({ url, name, size = 48 }: { url: string | null; name: stri
       className="rounded shrink-0 relative overflow-hidden flex items-center justify-center"
       style={{ width: size, height: size, backgroundColor: "var(--bg-300)", color: "var(--text-secondary)", flexShrink: 0 }}
     >
-      {/* Always render the icon as background/fallback */}
-      <Package size={size * 0.45} />
+      {/* Category icon as background/fallback */}
+      {categoryIcon(category, Math.round(size * 0.45))}
       {showImg && (
         <img
           src={url}
@@ -341,7 +366,7 @@ function ScanResultCard({
     >
       {/* Product info */}
       <div className="flex items-start gap-3">
-        <ProductPhoto url={photoUrl} name={name} size={56} />
+        <ProductPhoto url={photoUrl} name={name} size={56} category={result.exists ? result.product.category : result.apiData?.category ?? null} />
         <div className="flex-1 min-w-0">
           {isNew ? (
             <div className="flex flex-col gap-2">
@@ -491,7 +516,7 @@ function ProductRow({
       className="card-surface rounded-xl p-3 flex items-center gap-3"
       style={{ border: out ? "1px solid #991b1b" : low ? "1px solid #854d0e" : "1px solid var(--bg-300)" }}
     >
-      <ProductPhoto url={product.photoUrl} name={product.name} size={44} />
+      <ProductPhoto url={product.photoUrl} name={product.name} size={44} category={product.category} />
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
