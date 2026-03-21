@@ -14,6 +14,7 @@ export default async function PantrySettingsPage() {
 
   const categories = await prisma.pantryCategory.findMany({
     orderBy: [{ position: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, icon: true, position: true },
   });
 
   return <PantryCategorySettingsClient initialCategories={categories} />;

@@ -246,6 +246,7 @@ model FinanceBudgetEntry {
 model PantryCategory {
   id        Int      @id @default(autoincrement())
   name      String   @unique
+  icon      String   @default("Package")
   position  Int      @default(0)
   createdAt DateTime @default(now())
 }

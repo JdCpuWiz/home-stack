@@ -4,11 +4,9 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import {
   Camera, ShoppingCart, Pencil, Trash2, AlertTriangle,
   Plus, Minus, Check, X, ScanLine, Package,
-  UtensilsCrossed, Droplets, Sparkles, Pill, Coffee,
-  Leaf, Milk, Cookie, Snowflake, Wine, Shirt, Baby,
-  PawPrint, Apple, Fish, Sandwich, Home,
 } from "lucide-react";
 import dynamic from "next/dynamic";
+import { getPantryIcon } from "@/components/pantry/pantryIcons";
 
 const BarcodeScannerModal = dynamic(() => import("./BarcodeScannerModal"), { ssr: false });
 
@@ -34,6 +32,7 @@ type LookupResult =
     };
 
 type Store = { id: number; name: string };
+type PantryCategory = { name: string; icon: string };
 
 type ScanMode = "in" | "out";
 
@@ -51,53 +50,6 @@ function needsAttention(p: PantryProduct) {
   return isOutOfStock(p) || isLowStock(p);
 }
 
-function categoryIcon(category: string | null, iconSize: number) {
-  const c = (category ?? "").toLowerCase();
-  if (/clean|dish|laundry|detergent|bleach|scrub|mop|sponge|wipe/.test(c))   return <Sparkles size={iconSize} />;
-  if (/paper|tissue|towel|napkin|toilet/.test(c))                             return <Shirt size={iconSize} />;
-  if (/health|beauty|personal|vitamin|supplement|medicine|pill|drug|pharmacy|first aid|oral|dental|skin|hair|body wash|shampoo|soap/.test(c)) return <Pill size={iconSize} />;
-  if (/baby|infant|diaper|formula/.test(c))                                  return <Baby size={iconSize} />;
-  if (/pet|dog|cat|bird|fish food/.test(c))                                  return <PawPrint size={iconSize} />;
-  if (/dairy|milk|cheese|yogurt|butter|cream/.test(c))                       return <Milk size={iconSize} />;
-  if (/beverage|drink|juice|water|soda|coffee|tea|alcohol|wine|beer|spirit/.test(c)) return <Coffee size={iconSize} />;
-  if (/wine|beer|spirit|liquor/.test(c))                                     return <Wine size={iconSize} />;
-  if (/frozen/.test(c))                                                       return <Snowflake size={iconSize} />;
-  if (/produce|fruit|vegetable|fresh/.test(c))                               return <Apple size={iconSize} />;
-  if (/seafood|fish|meat|poultry|deli/.test(c))                              return <Fish size={iconSize} />;
-  if (/snack|chip|cracker|cookie|candy|sweet|confection|cereal|bread|bak/.test(c)) return <Cookie size={iconSize} />;
-  if (/sandwich|lunch|deli|prepared|meal/.test(c))                           return <Sandwich size={iconSize} />;
-  if (/spice|condiment|sauce|oil|vinegar|pasta|grain|rice|bean|canned|jar/.test(c)) return <UtensilsCrossed size={iconSize} />;
-  if (/organic|natural|herb|plant/.test(c))                                  return <Leaf size={iconSize} />;
-  if (/household|home|storage|bag|wrap|foil/.test(c))                        return <Home size={iconSize} />;
-  if (/drop|spray|liquid/.test(c))                                           return <Droplets size={iconSize} />;
-  return <Package size={iconSize} />;
-}
-
-function ProductPhoto({ url, name, size = 48, category = null }: { url: string | null; name: string; size?: number; category?: string | null }) {
-  const [loaded, setLoaded] = useState(false);
-  const [errored, setErrored] = useState(false);
-  const showImg = url && !errored;
-
-  return (
-    <div
-      className="rounded shrink-0 relative overflow-hidden flex items-center justify-center"
-      style={{ width: size, height: size, backgroundColor: "var(--bg-300)", color: "var(--text-secondary)", flexShrink: 0 }}
-    >
-      {/* Category icon as background/fallback */}
-      {categoryIcon(category, Math.round(size * 0.45))}
-      {showImg && (
-        <img
-          src={url}
-          alt={name}
-          className="absolute inset-0 w-full h-full object-cover rounded"
-          style={{ opacity: loaded ? 1 : 0, transition: "opacity 0.15s" }}
-          onLoad={() => setLoaded(true)}
-          onError={() => setErrored(true)}
-        />
-      )}
-    </div>
-  );
-}
 
 // ─── Add-to-list modal ────────────────────────────────────────────
 
@@ -377,7 +329,6 @@ function ScanResultCard({
     >
       {/* Product info */}
       <div className="flex items-start gap-3">
-        <ProductPhoto url={photoUrl} name={name} size={56} category={result.exists ? result.product.category : result.apiData?.category ?? null} />
         <div className="flex-1 min-w-0">
           {isNew ? (
             <div className="flex flex-col gap-2">
@@ -527,8 +478,6 @@ function ProductRow({
       className="card-surface rounded-xl p-3 flex items-center gap-3"
       style={{ border: out ? "1px solid #991b1b" : low ? "1px solid #854d0e" : "1px solid var(--bg-300)" }}
     >
-      <ProductPhoto url={product.photoUrl} name={product.name} size={44} category={product.category} />
-
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="font-semibold text-sm truncate">{product.name}</p>
@@ -612,10 +561,10 @@ export default function PantryClient({
   initialCategories,
 }: {
   initialProducts: PantryProduct[];
-  initialCategories: string[];
+  initialCategories: PantryCategory[];
 }) {
   const [products, setProducts] = useState<PantryProduct[]>(initialProducts);
-  const [categories, setCategories] = useState<string[]>(initialCategories);
+  const [categories, setCategories] = useState<PantryCategory[]>(initialCategories);
   const [scanMode, setScanMode] = useState<ScanMode>("in");
   const [barcodeInput, setBarcodeInput] = useState("");
   const [scanning, setScanning] = useState(false);
@@ -632,7 +581,7 @@ export default function PantryClient({
   useEffect(() => {
     fetch("/api/pantry/categories")
       .then((r) => r.json())
-      .then((data: { name: string }[]) => setCategories(data.map((c) => c.name)))
+      .then((data: PantryCategory[]) => setCategories(data))
       .catch(() => {});
   }, []);
 
@@ -647,8 +596,11 @@ export default function PantryClient({
       (p.brand && p.brand.toLowerCase().includes(search.toLowerCase()))
   );
 
+  // Build icon lookup: category name → icon name
+  const categoryIconMap = new Map(categories.map((c) => [c.name, c.icon]));
+
   // Group filtered products by category, alphabetized within each group
-  const groupedProducts: { category: string; items: PantryProduct[] }[] = (() => {
+  const groupedProducts: { category: string; icon: string; items: PantryProduct[] }[] = (() => {
     const map = new Map<string, PantryProduct[]>();
     for (const p of filteredProducts) {
       const key = p.category?.trim() || "Uncategorized";
@@ -666,7 +618,7 @@ export default function PantryClient({
         if (b === "Uncategorized") return -1;
         return a.localeCompare(b);
       })
-      .map(([category, items]) => ({ category, items }));
+      .map(([category, items]) => ({ category, icon: categoryIconMap.get(category) ?? "Package", items }));
   })();
 
   function showToast(msg: string, type: "ok" | "err" = "ok") {
@@ -892,9 +844,12 @@ export default function PantryClient({
           </div>
         ) : (
           <div className="flex flex-col gap-6">
-            {groupedProducts.map(({ category, items }) => (
+            {groupedProducts.map(({ category, icon, items }) => {
+              const CatIcon = getPantryIcon(icon);
+              return (
               <div key={category}>
                 <div className="flex items-center gap-2 mb-2">
+                  <CatIcon size={14} style={{ color: "var(--accent-orange)", flexShrink: 0 }} />
                   <span
                     className="text-xs font-bold uppercase tracking-wider"
                     style={{ color: "var(--accent-orange)" }}
@@ -916,7 +871,7 @@ export default function PantryClient({
                   ))}
                 </div>
               </div>
-            ))}
+            );})}
           </div>
         )}
       </div>
@@ -933,7 +888,7 @@ export default function PantryClient({
           product={editingProduct}
           onClose={() => setEditingProduct(null)}
           onSaved={handleEditSaved}
-          availableCategories={categories}
+          availableCategories={categories.map((c) => c.name)}
         />
       )}
       {addingToList && (

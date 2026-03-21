@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   if (!(await isAuthorized(req))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { name } = await req.json();
+  const { name, icon } = await req.json();
   if (!name?.trim()) {
     return NextResponse.json({ error: "name is required" }, { status: 400 });
   }
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   }
   const max = await prisma.pantryCategory.aggregate({ _max: { position: true } });
   const category = await prisma.pantryCategory.create({
-    data: { name: name.trim(), position: (max._max.position ?? -1) + 1 },
+    data: { name: name.trim(), icon: icon || "Package", position: (max._max.position ?? -1) + 1 },
   });
   return NextResponse.json(category, { status: 201 });
 }

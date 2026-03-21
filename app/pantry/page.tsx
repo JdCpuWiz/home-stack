@@ -12,13 +12,16 @@ export default async function PantryPage() {
 
   const [products, categories] = await Promise.all([
     prisma.pantryProduct.findMany({ orderBy: { name: "asc" } }),
-    prisma.pantryCategory.findMany({ orderBy: [{ position: "asc" }, { name: "asc" }] }),
+    prisma.pantryCategory.findMany({
+      orderBy: [{ position: "asc" }, { name: "asc" }],
+      select: { name: true, icon: true },
+    }),
   ]);
 
   return (
     <PantryClient
       initialProducts={products}
-      initialCategories={categories.map((c) => c.name)}
+      initialCategories={categories}
     />
   );
 }
