@@ -37,30 +37,31 @@ type ScanMode = "in" | "out";
 // ─── Helpers ──────────────────────────────────────────────────────
 
 function isLowStock(p: PantryProduct) {
-  return p.quantity <= p.minQty;
+  return p.minQty > 0 && p.quantity <= p.minQty;
 }
 
 function ProductPhoto({ url, name, size = 48 }: { url: string | null; name: string; size?: number }) {
-  const [imgError, setImgError] = useState(false);
-  if (url && !imgError) {
-    return (
-      <img
-        src={url}
-        alt={name}
-        width={size}
-        height={size}
-        className="rounded object-cover shrink-0"
-        style={{ width: size, height: size }}
-        onError={() => setImgError(true)}
-      />
-    );
-  }
+  const [loaded, setLoaded] = useState(false);
+  const [errored, setErrored] = useState(false);
+  const showImg = url && !errored;
+
   return (
     <div
-      className="rounded shrink-0 flex items-center justify-center"
-      style={{ width: size, height: size, backgroundColor: "var(--bg-300)", color: "var(--text-secondary)" }}
+      className="rounded shrink-0 relative overflow-hidden flex items-center justify-center"
+      style={{ width: size, height: size, backgroundColor: "var(--bg-300)", color: "var(--text-secondary)", flexShrink: 0 }}
     >
+      {/* Always render the icon as background/fallback */}
       <Package size={size * 0.45} />
+      {showImg && (
+        <img
+          src={url}
+          alt={name}
+          className="absolute inset-0 w-full h-full object-cover rounded"
+          style={{ opacity: loaded ? 1 : 0, transition: "opacity 0.15s" }}
+          onLoad={() => setLoaded(true)}
+          onError={() => setErrored(true)}
+        />
+      )}
     </div>
   );
 }
