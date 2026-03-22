@@ -1,0 +1,107 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+// Intentionally unauthenticated — kiosk runs on local LAN with no browser session.
+// Protected at the network level (Traefik / local-only access).
+
+interface ApiProductData {
+  name: string;
+  brand?: string;
+  size?: string;
+  photoUrl?: string;
+  category?: string;
+}
+
+async function lookupOpenFoodFacts(barcode: string): Promise<ApiProductData | null> {
+  try {
+    const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`, {
+      headers: { "User-Agent": "HomeStack/1.0" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.status !== 1 || !data.product) return null;
+    const p = data.product;
+    const name = (p.product_name || p.product_name_en || "").trim();
+    if (!name) return null;
+    return {
+      name,
+      brand: p.brands ? p.brands.split(",")[0].trim() : undefined,
+      size: p.quantity || undefined,
+      photoUrl: p.image_url || p.image_front_url || undefined,
+      category: p.categories ? p.categories.split(",")[0].trim() : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function lookupUPCitemdb(barcode: string): Promise<ApiProductData | null> {
+  try {
+    const res = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${barcode}`, {
+      headers: { "User-Agent": "HomeStack/1.0" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.code !== "OK" || !data.items?.length) return null;
+    const item = data.items[0];
+    const name = (item.title || "").trim();
+    if (!name) return null;
+    return {
+      name,
+      brand: item.brand || undefined,
+      size: item.size || undefined,
+      photoUrl: item.images?.[0] || undefined,
+      category: item.category || undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// POST /api/kiosk/scan
+// Body: { barcode: string, delta: number }  (+1 = stock in, -1 = stock out)
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const { barcode, delta } = body;
+
+  if (!barcode || typeof delta !== "number") {
+    return NextResponse.json({ error: "barcode and delta are required" }, { status: 400 });
+  }
+
+  // 1. Check existing product in DB
+  let product = await prisma.pantryProduct.findUnique({ where: { barcode } });
+
+  if (product) {
+    const newQty = Math.max(0, product.quantity + delta);
+    const updated = await prisma.pantryProduct.update({
+      where: { id: product.id },
+      data: { quantity: newQty },
+    });
+    return NextResponse.json({ status: "updated", product: updated, autocreated: false });
+  }
+
+  // 2. Not in DB — try external lookup waterfall
+  const apiData = (await lookupOpenFoodFacts(barcode)) ?? (await lookupUPCitemdb(barcode));
+
+  if (apiData) {
+    // Auto-create from external data
+    const created = await prisma.pantryProduct.create({
+      data: {
+        barcode,
+        name: apiData.name,
+        brand: apiData.brand ?? null,
+        size: apiData.size ?? null,
+        photoUrl: apiData.photoUrl ?? null,
+        category: apiData.category ?? null,
+        quantity: Math.max(0, delta),
+        minQty: 1,
+      },
+    });
+    return NextResponse.json({ status: "autocreated", product: created, autocreated: true });
+  }
+
+  // 3. Not found anywhere
+  return NextResponse.json({ status: "not_found", barcode }, { status: 404 });
+}
