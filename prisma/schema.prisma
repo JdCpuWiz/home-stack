@@ -177,6 +177,14 @@ model EmailDigest {
   updatedAt       DateTime  @updatedAt
 }
 
+model EmailSummary {
+  id        Int      @id @default(autoincrement())
+  sender    String
+  subject   String
+  summary   String
+  createdAt DateTime @default(now())
+}
+
 // ─── Finance ──────────────────────────────────────────────────────
 enum FinanceCategory {
   BILLS
