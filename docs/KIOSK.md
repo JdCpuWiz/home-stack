@@ -78,7 +78,7 @@ Paste this content (replace IP with your server's IP):
 [Desktop Entry]
 Type=Application
 Name=Kiosk
-Exec=chromium-browser --kiosk --noerrdialogs --disable-infobars --disable-session-crashed-bubble --disable-extensions --check-for-update-interval=31536000 --app=http://192.168.7.198:3005/kiosk
+Exec=bash -c 'sleep 5 && chromium-browser --kiosk --noerrdialogs --disable-infobars --disable-session-crashed-bubble --disable-extensions --check-for-update-interval=31536000 --app=http://192.168.7.198:3005/kiosk'
 NoDisplay=true
 X-GNOME-Autostart-enabled=true
 ```
