@@ -44,12 +44,7 @@ sudo raspi-config
 
 Navigate to **Display Options → Screen Blanking → No**.
 
-Or add to `/etc/xdg/lxsession/LXDE-pi/autostart`:
-```
-@xset s off
-@xset -dpms
-@xset s noblank
-```
+On Bookworm/Wayland, `raspi-config` is the reliable way — `xset` commands only work under X11.
 
 ---
 
@@ -70,22 +65,27 @@ No login is required — the kiosk page is publicly accessible on the local netw
 
 ### Configure Autostart
 
-Edit the LXDE autostart file:
+Raspberry Pi OS **Bookworm** (2023+) uses Wayland (Wayfire/labwc) — the old LXDE autostart path does not exist. Use an XDG autostart `.desktop` file instead, which works on both Bookworm and older Bullseye.
 
 ```bash
-nano ~/.config/lxsession/LXDE-pi/autostart
+mkdir -p ~/.config/autostart
+nano ~/.config/autostart/kiosk.desktop
 ```
 
-Add these lines (replace IP with your server's IP):
+Paste this content (replace IP with your server's IP):
 
-```
-@xset s off
-@xset -dpms
-@xset s noblank
-@chromium-browser --kiosk --noerrdialogs --disable-infobars --disable-session-crashed-bubble --disable-extensions --check-for-update-interval=31536000 --app=http://192.168.7.198:3005/kiosk
+```ini
+[Desktop Entry]
+Type=Application
+Name=Kiosk
+Exec=chromium-browser --kiosk --noerrdialogs --disable-infobars --disable-session-crashed-bubble --disable-extensions --check-for-update-interval=31536000 --app=http://192.168.7.198:3005/kiosk
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
 ```
 
 The `--app` flag launches Chromium in app mode (no address bar, no tabs).
+
+> **Older Bullseye/Buster (LXDE)**: If `~/.config/lxsession/LXDE-pi/autostart` exists, you can use that instead — prefix each command with `@`.
 
 ### Reboot and Test
 
