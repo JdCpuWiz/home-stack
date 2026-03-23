@@ -209,7 +209,7 @@ export default function KioskPage() {
 
           {/* Mode-switch QR codes */}
           {mounted && (
-            <div style={{ display: "flex", gap: "3rem", marginTop: "0.5rem" }}>
+            <div style={{ display: "flex", gap: "8rem", marginTop: "0.5rem" }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
                 <div style={{ padding: "0.875rem", background: "#ffffff", borderRadius: "0.75rem",
                   border: `3px solid ${mode === "in" ? "#15803d" : "#2d2d2d"}` }}>
