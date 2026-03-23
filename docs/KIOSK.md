@@ -78,7 +78,7 @@ Paste this content (replace IP with your server's IP):
 [Desktop Entry]
 Type=Application
 Name=Kiosk
-Exec=bash -c 'sleep 5 && chromium-browser --kiosk --noerrdialogs --disable-infobars --disable-session-crashed-bubble --disable-extensions --check-for-update-interval=31536000 --app=http://192.168.7.198:3005/kiosk'
+Exec=bash -c 'sleep 5 && chromium --kiosk --noerrdialogs --disable-infobars --disable-session-crashed-bubble --disable-extensions --check-for-update-interval=31536000 --password-store=basic --app=http://192.168.7.198:3005/kiosk'
 NoDisplay=true
 X-GNOME-Autostart-enabled=true
 ```
@@ -184,6 +184,8 @@ Print and mount two barcodes near the scanner for hands-free mode switching with
 | Problem | Fix |
 |---|---|
 | Black screen on boot | Check HDMI connection; ensure desktop (not Lite) OS is installed |
+| Chromium not found | Binary is `chromium` on Bookworm, not `chromium-browser` — check with `which chromium` |
+| Unlock Keyring popup on boot | Add `--password-store=basic` flag to the autostart Exec line |
 | Chromium crashes / slow | Add `--disable-gpu` flag to the autostart command |
 | No audio | Run `alsamixer` and unmute; confirm correct audio device is default |
 | Scanner not typing | Check USB connection; ensure kiosk page is the active window (click anywhere) |
