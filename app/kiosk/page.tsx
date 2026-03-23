@@ -67,6 +67,11 @@ function speak(text: string) {
   window.speechSynthesis.speak(utterance);
 }
 
+// ─── Mode-switch command barcodes ────────────────────────────────────────────
+
+const KIOSK_CMD_IN = "__MODE_IN__";
+const KIOSK_CMD_OUT = "__MODE_OUT__";
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function KioskPage() {
@@ -111,6 +116,20 @@ export default function KioskPage() {
       if (!barcode.trim()) return;
 
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+
+      // Mode-switch commands — handled locally, no API call
+      if (barcode === KIOSK_CMD_IN) {
+        setMode("in");
+        speak("Stocking in mode");
+        inputRef.current?.focus();
+        return;
+      }
+      if (barcode === KIOSK_CMD_OUT) {
+        setMode("out");
+        speak("Stocking out mode");
+        inputRef.current?.focus();
+        return;
+      }
 
       setKioskState({ status: "processing", barcode });
 
@@ -187,6 +206,30 @@ export default function KioskPage() {
               {mode === "in" ? "STOCKING IN" : "STOCKING OUT"}
             </span>
           </p>
+
+          {/* Mode-switch QR codes */}
+          {mounted && (
+            <div style={{ display: "flex", gap: "3rem", marginTop: "0.5rem" }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
+                <div style={{ padding: "0.875rem", background: "#ffffff", borderRadius: "0.75rem",
+                  border: `3px solid ${mode === "in" ? "#15803d" : "#2d2d2d"}` }}>
+                  <QRCodeSVG value={KIOSK_CMD_IN} size={110} bgColor="#ffffff" fgColor="#000000" />
+                </div>
+                <span style={{ color: mode === "in" ? "#15803d" : "#4a4a4a", fontSize: "0.9rem", fontWeight: 700 }}>
+                  Scan → IN mode
+                </span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
+                <div style={{ padding: "0.875rem", background: "#ffffff", borderRadius: "0.75rem",
+                  border: `3px solid ${mode === "out" ? "#b91c1c" : "#2d2d2d"}` }}>
+                  <QRCodeSVG value={KIOSK_CMD_OUT} size={110} bgColor="#ffffff" fgColor="#000000" />
+                </div>
+                <span style={{ color: mode === "out" ? "#b91c1c" : "#4a4a4a", fontSize: "0.9rem", fontWeight: 700 }}>
+                  Scan → OUT mode
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
