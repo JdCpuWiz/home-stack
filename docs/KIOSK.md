@@ -103,20 +103,51 @@ Chromium should launch full-screen on boot and load the kiosk page.
 
 Plug in. Works immediately — HID keyboard mode, no driver needed. Scans appear as keystrokes ending with Enter.
 
-### Bluetooth Scanner
+### Bluetooth Scanner (Tera 8100)
+
+The Tera 8100 must be set to **Bluetooth HID** mode before pairing. HID mode makes it act as a keyboard — do not use Bluetooth SPP mode (that requires a special app and won't send keystrokes).
+
+#### Step 1 — Set HID mode on the scanner
+
+Scan the **"Bluetooth HID"** setup barcode from the Tera manual (Chapter 1 → Bluetooth HID Pairing, page 04). This only needs to be done once.
+
+> **Physical shortcut**: Hold the trigger button to toggle Bluetooth HID Pairing On (long press = pairing on, second long press = pairing off — see manual page 05).
+
+#### Step 2 — Enter pairing mode
+
+Scan the **"Pairing"** barcode from the manual. The LED will flash blue rapidly, indicating the scanner is discoverable.
+
+#### Step 3 — Pair on the Pi
 
 ```bash
+sudo rfkill unblock bluetooth
 bluetoothctl
-> power on
-> scan on
-# Put scanner in pairing mode, watch for its MAC address
-> pair XX:XX:XX:XX:XX:XX
-> trust XX:XX:XX:XX:XX:XX
-> connect XX:XX:XX:XX:XX:XX
-> exit
+power on
+agent on
+default-agent
+scan on
 ```
 
-Trusted devices reconnect automatically on reboot.
+Watch for a device named **`BarCode Scanner HID`** and note its MAC address. Then:
+
+```
+pair XX:XX:XX:XX:XX:XX
+trust XX:XX:XX:XX:XX:XX
+connect XX:XX:XX:XX:XX:XX
+quit
+```
+
+The scanner beeps and the LED turns **solid blue** when pairing succeeds.
+
+#### Step 4 — Verify
+
+Open a text editor on the Pi and scan a barcode — it should type the barcode value followed by Enter.
+
+#### Auto-reconnect
+
+`trust` ensures the scanner reconnects automatically whenever it powers on. On reboot, turn the scanner on and it will reconnect to the Pi within a few seconds.
+
+> **Note**: A double-press of the trigger while idle cancels pairing mode after 1 minute. If the scanner stops being discoverable, repeat Step 2.
 
 ---
 
