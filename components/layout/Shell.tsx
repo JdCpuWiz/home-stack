@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import Header from "./Header";
 import SideNav from "./SideNav";
 import { GroceryActionsProvider } from "@/components/grocery/GroceryActionsContext";
@@ -10,7 +11,13 @@ type Props = {
 };
 
 export default function Shell({ children }: Props) {
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Kiosk is full-screen with no nav
+  if (pathname.startsWith("/kiosk")) {
+    return <>{children}</>;
+  }
 
   return (
     <GroceryActionsProvider>
