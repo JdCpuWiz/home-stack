@@ -2,7 +2,8 @@
  * Server-side helper for fetching net pay from the Timesheet app.
  * Uses Node's native http/https module to avoid Next.js fetch patching issues.
  * Pay periods run 15th → 14th; the relevant period for a finance month
- * is the one starting on the 15th of that month (paid on the 25th).
+ * is the one starting on the 15th of the PREVIOUS month (paid on the 25th of
+ * the budget month). e.g. March budget → Feb 15–Mar 14 period, paid Mar 25.
  */
 
 import http from "node:http";
@@ -62,8 +63,12 @@ export async function fetchTimesheetNetPay(
     : {};
 
   try {
-    const paddedMonth = String(month).padStart(2, "0");
-    const targetStartDate = `${year}-${paddedMonth}-15`;
+    // The pay period for a budget month starts on the 15th of the *previous* month.
+    // e.g. March 2026 budget → pay period Feb 15–Mar 14, paid out Mar 25.
+    const prevDate = new Date(year, month - 2, 15); // month-2 because month is 1-based
+    const prevYear = prevDate.getFullYear();
+    const prevMonth = String(prevDate.getMonth() + 1).padStart(2, "0");
+    const targetStartDate = `${prevYear}-${prevMonth}-15`;
 
     const periodsRes = await nodeGet(`${timesheetUrl}/api/pay-periods`, headers) as ApiResponse<RawPeriod[]>;
     const periods = periodsRes.data;
