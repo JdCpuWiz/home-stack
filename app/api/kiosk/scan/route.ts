@@ -80,29 +80,30 @@ export async function POST(req: NextRequest) {
       data: { quantity: newQty },
     });
 
-    // If scanning out and qty just crossed the min threshold, add to all active grocery lists
+    // If scanning out and qty just crossed the min threshold, add to the first active grocery list
     let addedToGroceryLists: string[] = [];
     if (delta < 0 && product.minQty > 0 && newQty <= product.minQty) {
-      const activeLists = await prisma.groceryList.findMany({
+      const activeList = await prisma.groceryList.findFirst({
         where: { status: "ACTIVE" },
         include: { store: true, items: { select: { name: true } } },
+        orderBy: { store: { position: "asc" } },
       });
-      for (const list of activeLists) {
-        const alreadyOn = list.items.some(
+      if (activeList) {
+        const alreadyOn = activeList.items.some(
           (i) => i.name.toLowerCase() === updated.name.toLowerCase()
         );
         if (!alreadyOn) {
           await prisma.groceryListItem.create({
             data: {
-              listId: list.id,
+              listId: activeList.id,
               name: updated.name,
               category: updated.category ?? null,
               quantity: null,
               purchased: false,
-              position: list.items.length,
+              position: activeList.items.length,
             },
           });
-          addedToGroceryLists.push(list.store.name);
+          addedToGroceryLists.push(activeList.store.name);
         }
       }
     }
