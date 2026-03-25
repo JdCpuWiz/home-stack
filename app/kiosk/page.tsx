@@ -23,8 +23,8 @@ interface KioskProduct {
 type KioskState =
   | { status: "idle" }
   | { status: "processing"; barcode: string }
-  | { status: "found"; product: KioskProduct; mode: ScanMode }
-  | { status: "autocreated"; product: KioskProduct; mode: ScanMode }
+  | { status: "found"; product: KioskProduct; mode: ScanMode; addedToGroceryLists: string[] }
+  | { status: "autocreated"; product: KioskProduct; mode: ScanMode; addedToGroceryLists: string[] }
   | { status: "not_found"; barcode: string };
 
 interface ScanEntry {
@@ -152,10 +152,12 @@ export default function KioskPage() {
         } else {
           const product: KioskProduct = data.product;
           const resultStatus = data.autocreated ? "autocreated" : "found";
-          setKioskState({ status: resultStatus as "found" | "autocreated", product, mode });
+          const addedToGroceryLists: string[] = data.addedToGroceryLists ?? [];
+          setKioskState({ status: resultStatus as "found" | "autocreated", product, mode, addedToGroceryLists });
           playTone("success");
           const verb = mode === "in" ? "Added to pantry inventory" : "Removed from pantry inventory";
-          speak(`${verb} — ${product.name}. Quantity now ${product.quantity}.`);
+          const grocerySuffix = addedToGroceryLists.length > 0 ? ` Added to grocery list.` : "";
+          speak(`${verb} — ${product.name}. Quantity now ${product.quantity}.${grocerySuffix}`);
           pushHistory({ barcode, name: product.name, mode, newQty: product.quantity, result: resultStatus as "found" | "autocreated" });
         }
       } catch {
@@ -248,7 +250,7 @@ export default function KioskPage() {
     }
 
     if (kioskState.status === "found" || kioskState.status === "autocreated") {
-      const { product, mode: scanMode } = kioskState;
+      const { product, mode: scanMode, addedToGroceryLists } = kioskState;
       const statusText =
         kioskState.status === "autocreated"
           ? "New item added to pantry inventory"
@@ -273,6 +275,14 @@ export default function KioskPage() {
             <div style={{ background: "#1d4ed8", color: "#ffffff", borderRadius: "9999px",
               padding: "0.4rem 1.25rem", fontSize: "1rem", fontWeight: 600 }}>
               Automatically created from product database
+            </div>
+          )}
+
+          {/* Added to grocery list badge */}
+          {addedToGroceryLists.length > 0 && (
+            <div style={{ background: "#6d28d9", color: "#ffffff", borderRadius: "9999px",
+              padding: "0.4rem 1.25rem", fontSize: "1rem", fontWeight: 600 }}>
+              🛒 Added to grocery list{addedToGroceryLists.length > 1 ? "s" : ""}: {addedToGroceryLists.join(", ")}
             </div>
           )}
 

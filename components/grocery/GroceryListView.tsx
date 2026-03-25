@@ -6,14 +6,17 @@ import { GroceryList, GroceryStore, GroceryListItem } from "./groceryUtils";
 import { useGroceryActions } from "./GroceryActionsContext";
 import AddItemDialog from "./AddItemDialog";
 
+type PantryItem = { name: string; category: string | null };
+
 type Props = {
   list: GroceryList;
   store: GroceryStore;
   categories: string[];
   suggestions: string[];
+  pantryItems?: PantryItem[];
 };
 
-export default function GroceryListView({ list, store, categories, suggestions }: Props) {
+export default function GroceryListView({ list, store, categories, suggestions, pantryItems = [] }: Props) {
   const router = useRouter();
   const { register, unregister } = useGroceryActions();
   // Only show unpurchased items — purchased ones are checked off and hidden
@@ -185,6 +188,7 @@ export default function GroceryListView({ list, store, categories, suggestions }
           listId={list.id}
           categories={categories}
           suggestions={suggestions}
+          pantryItems={pantryItems}
           item={editItem ?? undefined}
           onSave={handleSaved}
           onClose={() => { setShowAdd(false); setEditItem(null); }}

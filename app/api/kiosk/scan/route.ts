@@ -79,7 +79,35 @@ export async function POST(req: NextRequest) {
       where: { id: product.id },
       data: { quantity: newQty },
     });
-    return NextResponse.json({ status: "updated", product: updated, autocreated: false });
+
+    // If scanning out and qty just crossed the min threshold, add to all active grocery lists
+    let addedToGroceryLists: string[] = [];
+    if (delta < 0 && product.minQty > 0 && newQty <= product.minQty) {
+      const activeLists = await prisma.groceryList.findMany({
+        where: { status: "ACTIVE" },
+        include: { store: true, items: { select: { name: true } } },
+      });
+      for (const list of activeLists) {
+        const alreadyOn = list.items.some(
+          (i) => i.name.toLowerCase() === updated.name.toLowerCase()
+        );
+        if (!alreadyOn) {
+          await prisma.groceryListItem.create({
+            data: {
+              listId: list.id,
+              name: updated.name,
+              category: updated.category ?? null,
+              quantity: null,
+              purchased: false,
+              position: list.items.length,
+            },
+          });
+          addedToGroceryLists.push(list.store.name);
+        }
+      }
+    }
+
+    return NextResponse.json({ status: "updated", product: updated, autocreated: false, addedToGroceryLists });
   }
 
   // 2. Not in DB — try external lookup waterfall

@@ -23,6 +23,12 @@ export default async function GroceryStorePage({
   const pantryCategories = await prisma.pantryCategory.findMany({ orderBy: { name: "asc" } });
   const categories = pantryCategories.map((c) => c.name);
 
+  // Fetch pantry products for autocomplete in AddItemDialog
+  const pantryProducts = await prisma.pantryProduct.findMany({
+    select: { name: true, category: true },
+    orderBy: { name: "asc" },
+  });
+
   // Fetch or auto-create active list
   let list = await prisma.groceryList.findFirst({
     where: { storeId: id, status: "ACTIVE" },
@@ -62,6 +68,7 @@ export default async function GroceryStorePage({
       store={store as unknown as GroceryStore}
       categories={categories}
       suggestions={suggestions}
+      pantryItems={pantryProducts}
     />
   );
 }
