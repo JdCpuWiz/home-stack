@@ -4,6 +4,18 @@ import { prisma } from "@/lib/prisma";
 // Intentionally unauthenticated — kiosk runs on local LAN with no browser session.
 // Protected at the network level (Traefik / local-only access).
 
+const HA_WEBHOOK_URL = process.env.HA_WEBHOOK_URL ?? "";
+
+function fireHaEvent(payload: Record<string, unknown>) {
+  if (!HA_WEBHOOK_URL) return;
+  fetch(HA_WEBHOOK_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(5000),
+  }).catch(() => {});
+}
+
 interface ApiProductData {
   name: string;
   brand?: string;
@@ -80,6 +92,11 @@ export async function POST(req: NextRequest) {
       data: { quantity: newQty },
     });
 
+    // Fire HA notification if item just hit zero
+    if (delta < 0 && newQty === 0) {
+      fireHaEvent({ event: "out_of_stock", product: updated.name, quantity: 0 });
+    }
+
     // If scanning out and qty just crossed the min threshold, add to the first active grocery list
     let addedToGroceryLists: string[] = [];
     if (delta < 0 && product.minQty > 0 && newQty <= product.minQty) {
@@ -104,6 +121,12 @@ export async function POST(req: NextRequest) {
             },
           });
           addedToGroceryLists.push(activeList.store.name);
+          fireHaEvent({
+            event: "added_to_grocery",
+            product: updated.name,
+            quantity: newQty,
+            store: activeList.store.name,
+          });
         }
       }
     }
