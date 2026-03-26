@@ -199,10 +199,10 @@ export default function KioskPage() {
       return (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2rem", textAlign: "center" }}>
           <ScanLine size={120} color="#ffffff" />
-          <p style={{ color: "#ffffff", fontSize: "2.5rem", fontWeight: 600 }}>
+          <p style={{ color: "#ffffff", fontSize: "3rem", fontWeight: 600 }}>
             Scan a barcode to begin
           </p>
-          <p style={{ color: "#ffffff", fontSize: "1.5rem" }}>
+          <p style={{ color: "#ffffff", fontSize: "1.8rem" }}>
             Mode:{" "}
             <span style={{ color: mode === "in" ? "#15803d" : "#b91c1c", fontWeight: 700 }}>
               {mode === "in" ? "STOCKING IN" : "STOCKING OUT"}
@@ -217,7 +217,7 @@ export default function KioskPage() {
                   border: `3px solid ${mode === "in" ? "#15803d" : "#2d2d2d"}` }}>
                   <QRCodeSVG value={KIOSK_CMD_IN} size={110} bgColor="#ffffff" fgColor="#000000" />
                 </div>
-                <span style={{ color: mode === "in" ? "#15803d" : "#ffffff", fontSize: "0.9rem", fontWeight: 700 }}>
+                <span style={{ color: mode === "in" ? "#15803d" : "#ffffff", fontSize: "1.08rem", fontWeight: 700 }}>
                   Scan → IN mode
                 </span>
               </div>
@@ -226,7 +226,7 @@ export default function KioskPage() {
                   border: `3px solid ${mode === "out" ? "#b91c1c" : "#2d2d2d"}` }}>
                   <QRCodeSVG value={KIOSK_CMD_OUT} size={110} bgColor="#ffffff" fgColor="#000000" />
                 </div>
-                <span style={{ color: mode === "out" ? "#b91c1c" : "#ffffff", fontSize: "0.9rem", fontWeight: 700 }}>
+                <span style={{ color: mode === "out" ? "#b91c1c" : "#ffffff", fontSize: "1.08rem", fontWeight: 700 }}>
                   Scan → OUT mode
                 </span>
               </div>
