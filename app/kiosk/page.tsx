@@ -427,7 +427,7 @@ export default function KioskPage() {
         <div style={{ borderTop: "1px solid #2d2d2d", padding: "1rem 3rem",
           display: "flex", alignItems: "center", gap: "1rem", flexShrink: 0, minHeight: "80px",
           overflowX: "auto" }}>
-          <span style={{ color: "#4a4a4a", fontSize: "0.8rem", fontWeight: 600,
+          <span style={{ color: "#ffffff", fontSize: "0.8rem", fontWeight: 600,
             textTransform: "uppercase", letterSpacing: "0.1em", whiteSpace: "nowrap", flexShrink: 0 }}>
             Recent
           </span>
