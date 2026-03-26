@@ -214,7 +214,7 @@ export default function KioskPage() {
             <div style={{ display: "flex", gap: "8rem", marginTop: "0.5rem" }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
                 <div style={{ padding: "0.875rem", background: "#ffffff", borderRadius: "0.75rem",
-                  border: `6px solid ${mode === "in" ? "#15803d" : "#2d2d2d"}` }}>
+                  border: `10px solid ${mode === "in" ? "#15803d" : "#2d2d2d"}` }}>
                   <QRCodeSVG value={KIOSK_CMD_IN} size={110} bgColor="#ffffff" fgColor="#000000" />
                 </div>
                 <span style={{ color: mode === "in" ? "#15803d" : "#ffffff", fontSize: "1.08rem", fontWeight: 700 }}>
@@ -223,7 +223,7 @@ export default function KioskPage() {
               </div>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem" }}>
                 <div style={{ padding: "0.875rem", background: "#ffffff", borderRadius: "0.75rem",
-                  border: `6px solid ${mode === "out" ? "#b91c1c" : "#2d2d2d"}` }}>
+                  border: `10px solid ${mode === "out" ? "#b91c1c" : "#2d2d2d"}` }}>
                   <QRCodeSVG value={KIOSK_CMD_OUT} size={110} bgColor="#ffffff" fgColor="#000000" />
                 </div>
                 <span style={{ color: mode === "out" ? "#b91c1c" : "#ffffff", fontSize: "1.08rem", fontWeight: 700 }}>
