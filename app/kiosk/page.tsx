@@ -198,8 +198,8 @@ export default function KioskPage() {
     if (kioskState.status === "idle") {
       return (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2rem", textAlign: "center" }}>
-          <ScanLine size={120} color="#2d2d2d" />
-          <p style={{ color: "#4a4a4a", fontSize: "2.5rem", fontWeight: 600 }}>
+          <ScanLine size={120} color="#ffffff" />
+          <p style={{ color: "#ffffff", fontSize: "2.5rem", fontWeight: 600 }}>
             Scan a barcode to begin
           </p>
           <p style={{ color: "#ffffff", fontSize: "1.5rem" }}>
