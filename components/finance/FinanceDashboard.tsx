@@ -651,11 +651,9 @@ export default function FinanceDashboard() {
                       }}
                     >
                       {entry.subscriptionId != null && (
-                        <RefreshCw
-                          size={10}
-                          className="shrink-0 opacity-50"
-                          title="Auto-populated from Subscriptions"
-                        />
+                        <span className="shrink-0 opacity-50" title="Auto-populated from Subscriptions">
+                          <RefreshCw size={10} />
+                        </span>
                       )}
                       <span className="truncate">{entry.name}</span>
                     </span>
