@@ -32,7 +32,9 @@ export function isSubscriptionDueInMonth(
   const interval = FREQUENCY_MONTHS[frequency] ?? 1;
   const { year: rYear, month: rMonth } = parseDateParts(renewalDate);
   const monthsDiff = (year - rYear) * 12 + (month - rMonth);
-  return ((monthsDiff % interval) + interval) % interval === 0;
+  // Target month is before the anchor — subscription hasn't started yet
+  if (monthsDiff < 0) return false;
+  return monthsDiff % interval === 0;
 }
 
 /**
