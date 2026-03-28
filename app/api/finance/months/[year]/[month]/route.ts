@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAuthorized } from "@/lib/apiAuth";
 import { prisma } from "@/lib/prisma";
 import { fetchTimesheetNetPay } from "@/lib/timesheetClient";
+import { isSubscriptionDueInMonth } from "@/lib/subscriptionUtils";
 
 const ENTRY_ORDER = { orderBy: [{ position: "asc" as const }, { createdAt: "asc" as const }] };
 
@@ -19,6 +20,12 @@ async function getOrCreateMonth(year: number, month: number) {
     orderBy: [{ category: "asc" }, { position: "asc" }],
   });
 
+  // Active subscriptions due this month
+  const allSubs = await prisma.subscription.findMany({ where: { isActive: true } });
+  const subsDue = allSubs.filter((s) =>
+    isSubscriptionDueInMonth(s.renewalDate, s.frequency, year, month)
+  );
+
   // Carry-over amounts from previous month
   const prevYear = month === 1 ? year - 1 : year;
   const prevMonth = month === 1 ? 12 : month - 1;
@@ -35,6 +42,28 @@ async function getOrCreateMonth(year: number, month: number) {
   // Try timesheet for net pay
   const timesheetNetPay = await fetchTimesheetNetPay(year, month);
 
+  const itemEntries = items.map((item, idx) => ({
+    itemId: item.id,
+    name: item.name,
+    category: item.category,
+    amount: prevAmountByItemId.has(item.id)
+      ? prevAmountByItemId.get(item.id)!
+      : item.defaultAmount != null
+      ? parseFloat(item.defaultAmount.toString())
+      : 0,
+    payDay: item.payDay,
+    position: idx,
+  }));
+
+  const subEntries = subsDue.map((sub, idx) => ({
+    subscriptionId: sub.id,
+    name: sub.name,
+    category: "SUBSCRIPTIONS" as const,
+    amount: parseFloat(sub.cost.toString()),
+    payDay: parseInt(sub.renewalDate.toISOString().slice(8, 10)),
+    position: itemEntries.length + idx,
+  }));
+
   return prisma.financeMonth.create({
     data: {
       year,
@@ -42,18 +71,7 @@ async function getOrCreateMonth(year: number, month: number) {
       netPay: timesheetNetPay ?? null,
       netPayIsManual: false,
       entries: {
-        create: items.map((item, idx) => ({
-          itemId: item.id,
-          name: item.name,
-          category: item.category,
-          amount: prevAmountByItemId.has(item.id)
-            ? prevAmountByItemId.get(item.id)!
-            : item.defaultAmount != null
-            ? parseFloat(item.defaultAmount.toString())
-            : 0,
-          payDay: item.payDay,
-          position: idx,
-        })),
+        create: [...itemEntries, ...subEntries],
       },
     },
     include: { entries: ENTRY_ORDER },

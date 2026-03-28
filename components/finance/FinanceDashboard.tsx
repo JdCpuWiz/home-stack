@@ -23,6 +23,7 @@ import {
 type Entry = {
   id: number;
   itemId: number | null;
+  subscriptionId: number | null;
   name: string;
   category: string;
   amount: string;
@@ -642,14 +643,21 @@ export default function FinanceDashboard() {
 
                     {/* Name */}
                     <span
-                      className="flex-1 text-sm truncate"
+                      className="flex-1 flex items-center gap-1.5 text-sm truncate min-w-0"
                       style={{
                         color: entry.isPaid ? "var(--text-secondary)" : "var(--text-primary)",
                         textDecoration: entry.isPaid ? "line-through" : "none",
                         opacity: entry.isPaid ? 0.65 : 1,
                       }}
                     >
-                      {entry.name}
+                      {entry.subscriptionId != null && (
+                        <RefreshCw
+                          size={10}
+                          className="shrink-0 opacity-50"
+                          title="Auto-populated from Subscriptions"
+                        />
+                      )}
+                      <span className="truncate">{entry.name}</span>
                     </span>
 
                     {/* Pay day */}

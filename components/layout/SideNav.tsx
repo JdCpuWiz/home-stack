@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import {
   Package, Plus, CheckSquare, Search, Users, X, ShoppingCart, History,
   Settings, CheckCheck, LogOut, LogIn, List, Trash2, UtensilsCrossed,
-  LayoutDashboard, Truck, Mail, DollarSign, ChevronDown, ScanLine,
+  LayoutDashboard, Truck, Mail, DollarSign, ChevronDown, ScanLine, RefreshCw,
 } from "lucide-react";
 import { useGroceryActions } from "@/components/grocery/GroceryActionsContext";
 
@@ -233,7 +233,10 @@ export default function SideNav({ open, onClose }: Props) {
             <>
               <SectionHeader label="Finance" sectionKey="finance" open={sections.finance} onToggle={toggleSection} />
               {sections.finance && (
-                <NavLink href="/finance" label="Budget" icon={<DollarSign size={15} />} exact onClick={onClose} />
+                <>
+                  <NavLink href="/finance" label="Budget" icon={<DollarSign size={15} />} exact onClick={onClose} />
+                  <NavLink href="/subscriptions" label="Subscriptions" icon={<RefreshCw size={15} />} exact onClick={onClose} />
+                </>
               )}
             </>
           )}

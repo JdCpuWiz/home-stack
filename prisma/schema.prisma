@@ -224,21 +224,23 @@ model FinanceMonth {
 }
 
 model FinanceBudgetEntry {
-  id        Int                @id @default(autoincrement())
-  monthId   Int
-  month     FinanceMonth       @relation(fields: [monthId], references: [id], onDelete: Cascade)
-  itemId    Int?
-  item      FinanceBudgetItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
-  name      String
-  category  FinanceCategory
-  amount    Decimal            @db.Decimal(10, 2)
-  payDay    Int?
-  isPaid    Boolean            @default(false)
-  paidAt    DateTime?
-  notes     String?
-  position  Int                @default(0)
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  id             Int                @id @default(autoincrement())
+  monthId        Int
+  month          FinanceMonth       @relation(fields: [monthId], references: [id], onDelete: Cascade)
+  itemId         Int?
+  item           FinanceBudgetItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  subscriptionId Int?
+  subscription   Subscription?      @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  name           String
+  category       FinanceCategory
+  amount         Decimal            @db.Decimal(10, 2)
+  payDay         Int?
+  isPaid         Boolean            @default(false)
+  paidAt         DateTime?
+  notes          String?
+  position       Int                @default(0)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 }
 
 // ─── Pantry ───────────────────────────────────────────────────────
@@ -262,6 +264,29 @@ model PantryProduct {
   minQty    Int      @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ─── Subscriptions ────────────────────────────────────────────────
+enum SubscriptionFrequency {
+  MONTHLY
+  QUARTERLY
+  BIANNUAL
+  ANNUAL
+}
+
+model Subscription {
+  id            Int                   @id @default(autoincrement())
+  name          String
+  cost          Decimal               @db.Decimal(10, 2)
+  frequency     SubscriptionFrequency
+  renewalDate   DateTime              @db.Date
+  paymentMethod String?
+  website       String?
+  notes         String?
+  isActive      Boolean               @default(true)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  entries       FinanceBudgetEntry[]
 }
 
 // ─── Recipes ──────────────────────────────────────────────────────
