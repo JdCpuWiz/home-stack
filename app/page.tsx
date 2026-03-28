@@ -3,7 +3,8 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Package, CheckSquare, ShoppingCart, UtensilsCrossed, Truck, Mail, DollarSign, ScanLine, AlertTriangle } from "lucide-react";
+import { Package, CheckSquare, ShoppingCart, UtensilsCrossed, Truck, Mail, DollarSign, ScanLine, AlertTriangle, RefreshCw } from "lucide-react";
+import { isSubscriptionDueInMonth } from "@/lib/subscriptionUtils";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,7 @@ export default async function DashboardPage() {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  const [toteCount, todoCount, overdueCount, activeGroceryLists, pantryStats, recipeCount, activePackageCount, outForDeliveryCount, todayDigest, financeMonth] = await Promise.all([
+  const [toteCount, todoCount, overdueCount, activeGroceryLists, pantryStats, recipeCount, activePackageCount, outForDeliveryCount, todayDigest, financeMonth, allActiveSubs] = await Promise.all([
     prisma.tote.count(),
     prisma.todoItem.count(),
     prisma.todoItem.count({ where: { dueDate: { lt: now } } }),
@@ -41,6 +42,7 @@ export default async function DashboardPage() {
       where: { year_month: { year: currentYear, month: currentMonth } },
       include: { entries: { select: { amount: true, isPaid: true } } },
     }),
+    prisma.subscription.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }),
   ]);
 
   const financeNetPay = financeMonth?.netPay ? parseFloat(financeMonth.netPay.toString()) : null;
@@ -50,6 +52,14 @@ export default async function DashboardPage() {
   const financeBalance = financeNetPay != null && financeCommitted != null ? financeNetPay - financeCommitted : null;
   const financePaid = financeMonth ? financeMonth.entries.filter((e) => e.isPaid).length : 0;
   const financeTotal = financeMonth ? financeMonth.entries.length : 0;
+
+  const subsThisMonth = allActiveSubs.filter((s) =>
+    isSubscriptionDueInMonth(s.renewalDate, s.frequency, currentYear, currentMonth)
+  );
+  const subsThisMonthTotal = subsThisMonth.reduce(
+    (sum, s) => sum + parseFloat(s.cost.toString()),
+    0
+  );
 
   function fmtCurrency(n: number) {
     return n.toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -248,6 +258,50 @@ export default async function DashboardPage() {
           )}
           <Link href="/finance" className="text-sm" style={{ color: "var(--text-secondary)" }}>
             View Budget →
+          </Link>
+        </div>
+
+        {/* Subscriptions */}
+        <div className="card flex flex-col gap-3">
+          <div className="flex items-center gap-2" style={{ color: "var(--accent-orange)" }}>
+            <RefreshCw size={20} />
+            <span className="font-semibold">Subscriptions</span>
+          </div>
+          {allActiveSubs.length === 0 ? (
+            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+              No subscriptions set up
+            </p>
+          ) : subsThisMonth.length === 0 ? (
+            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+              None due this month
+            </p>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {subsThisMonth.map((s) => (
+                <div key={s.id} className="flex items-center justify-between text-sm">
+                  <span className="truncate pr-2" style={{ color: "var(--text-primary)" }}>
+                    {s.name}
+                  </span>
+                  <span className="shrink-0 tabular-nums" style={{ color: "var(--accent-orange)" }}>
+                    {fmtCurrency(parseFloat(s.cost.toString()))}
+                  </span>
+                </div>
+              ))}
+              {subsThisMonth.length > 1 && (
+                <div
+                  className="flex items-center justify-between text-sm font-semibold pt-1 mt-0.5"
+                  style={{ borderTop: "1px solid var(--bg-300)" }}
+                >
+                  <span style={{ color: "var(--text-secondary)" }}>Total</span>
+                  <span style={{ color: "var(--accent-orange)" }}>
+                    {fmtCurrency(subsThisMonthTotal)}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+          <Link href="/subscriptions" className="text-sm" style={{ color: "var(--text-secondary)" }}>
+            All Subscriptions →
           </Link>
         </div>
 
