@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { name, cost, frequency, renewalDate, paymentMethod, website, notes } = body;
+  const { name, cost, frequency, renewalDate, paymentMethod, website, category, notes } = body;
 
   if (!name?.trim() || cost == null || !frequency || !renewalDate)
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
       renewalDate: new Date(renewalDate),
       paymentMethod: paymentMethod || null,
       website: website || null,
+      category: category || null,
       notes: notes || null,
     },
   });

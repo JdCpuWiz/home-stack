@@ -282,6 +282,7 @@ model Subscription {
   renewalDate   DateTime              @db.Date
   paymentMethod String?
   website       String?
+  category      String?
   notes         String?
   isActive      Boolean               @default(true)
   createdAt     DateTime              @default(now())

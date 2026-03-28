@@ -25,6 +25,7 @@ type Subscription = {
   renewalDate: string;
   paymentMethod: string | null;
   website: string | null;
+  category: string | null;
   notes: string | null;
   isActive: boolean;
 };
@@ -32,11 +33,19 @@ type Subscription = {
 // ─── Constants ────────────────────────────────────────────────────
 
 const FREQ_OPTIONS = [
-  { value: "MONTHLY", label: "Monthly" },
+  { value: "MONTHLY",   label: "Monthly" },
   { value: "QUARTERLY", label: "Quarterly" },
-  { value: "BIANNUAL", label: "Every 6 months" },
-  { value: "ANNUAL", label: "Annual" },
+  { value: "BIANNUAL",  label: "Every 6 months" },
+  { value: "ANNUAL",    label: "Annual" },
 ];
+
+// Distinct solid colors per frequency
+const FREQ_STYLES: Record<string, { bg: string; text: string }> = {
+  MONTHLY:   { bg: "#1d4ed8", text: "#ffffff" },
+  QUARTERLY: { bg: "#6d28d9", text: "#ffffff" },
+  BIANNUAL:  { bg: "#ff9900", text: "#0a0a0a" },
+  ANNUAL:    { bg: "#15803d", text: "#ffffff" },
+};
 
 const STATUS_STYLES = {
   red:    { dot: "#b91c1c", text: "#f87171",  label: "Renews this month" },
@@ -53,11 +62,10 @@ function fmt(amount: string | number): string {
 
 function formatDate(d: Date): string {
   const today = new Date();
-  const sameYear = d.getFullYear() === today.getFullYear();
   return d.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
-    ...(sameYear ? {} : { year: "numeric" }),
+    ...(d.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}),
   });
 }
 
@@ -66,6 +74,7 @@ function formatDate(d: Date): string {
 export default function SubscriptionList() {
   const [subs, setSubs] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
+  const [freqFilter, setFreqFilter] = useState<string>("ALL");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Subscription | null>(null);
 
@@ -76,6 +85,7 @@ export default function SubscriptionList() {
   const [renewalDate, setRenewalDate] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [website, setWebsite] = useState("");
+  const [category, setCategory] = useState("");
   const [notes, setNotes] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -91,7 +101,7 @@ export default function SubscriptionList() {
   function openAdd() {
     setEditing(null);
     setName(""); setCost(""); setFrequency("MONTHLY"); setRenewalDate("");
-    setPaymentMethod(""); setWebsite(""); setNotes(""); setIsActive(true);
+    setPaymentMethod(""); setWebsite(""); setCategory(""); setNotes(""); setIsActive(true);
     setModalOpen(true);
   }
 
@@ -103,6 +113,7 @@ export default function SubscriptionList() {
     setRenewalDate(sub.renewalDate.slice(0, 10));
     setPaymentMethod(sub.paymentMethod ?? "");
     setWebsite(sub.website ?? "");
+    setCategory(sub.category ?? "");
     setNotes(sub.notes ?? "");
     setIsActive(sub.isActive);
     setModalOpen(true);
@@ -119,6 +130,7 @@ export default function SubscriptionList() {
         renewalDate,
         paymentMethod: paymentMethod || null,
         website: website || null,
+        category: category || null,
         notes: notes || null,
         ...(editing && { isActive }),
       };
@@ -147,13 +159,20 @@ export default function SubscriptionList() {
     if (res.ok) setSubs((prev) => prev.filter((s) => s.id !== sub.id));
   }
 
-  // ── Summary stats ────────────────────────────────────────────────
+  // ── Derived ──────────────────────────────────────────────────────
+
   const activeSubs = subs.filter((s) => s.isActive);
   const monthlyTotal = activeSubs.reduce((sum, s) => {
     const interval = FREQUENCY_MONTHS[s.frequency] ?? 1;
     return sum + parseFloat(s.cost) / interval;
   }, 0);
   const annualTotal = monthlyTotal * 12;
+
+  // Frequencies present in the list (for filter bar)
+  const presentFreqs = Array.from(new Set(subs.map((s) => s.frequency)));
+
+  const visibleSubs =
+    freqFilter === "ALL" ? subs : subs.filter((s) => s.frequency === freqFilter);
 
   // ── Render ───────────────────────────────────────────────────────
   return (
@@ -173,7 +192,7 @@ export default function SubscriptionList() {
       {/* Summary */}
       {activeSubs.length > 0 && (
         <div
-          className="card mb-6 grid grid-cols-3"
+          className="card mb-5 grid grid-cols-3"
           style={{ borderColor: "var(--bg-300)", overflow: "hidden" }}
         >
           <div className="p-4 text-center" style={{ borderRight: "1px solid var(--bg-300)" }}>
@@ -203,6 +222,41 @@ export default function SubscriptionList() {
         </div>
       )}
 
+      {/* Frequency filter bar */}
+      {!loading && subs.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <button
+            onClick={() => setFreqFilter("ALL")}
+            className="btn-sm rounded-full text-xs font-medium px-3"
+            style={{
+              backgroundColor: freqFilter === "ALL" ? "var(--accent-orange)" : "var(--bg-300)",
+              color: freqFilter === "ALL" ? "#0a0a0a" : "var(--text-secondary)",
+            }}
+          >
+            All ({subs.length})
+          </button>
+          {FREQ_OPTIONS.filter((o) => presentFreqs.includes(o.value as Subscription["frequency"])).map((o) => {
+            const count = subs.filter((s) => s.frequency === o.value).length;
+            const active = freqFilter === o.value;
+            const fs = FREQ_STYLES[o.value];
+            return (
+              <button
+                key={o.value}
+                onClick={() => setFreqFilter(active ? "ALL" : o.value)}
+                className="btn-sm rounded-full text-xs font-medium px-3"
+                style={{
+                  backgroundColor: active ? fs.bg : "var(--bg-300)",
+                  color: active ? fs.text : "var(--text-secondary)",
+                  border: active ? "none" : `1px solid ${fs.bg}40`,
+                }}
+              >
+                {o.label} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Loading */}
       {loading && (
         <div className="text-center py-12" style={{ color: "var(--text-secondary)" }}>
@@ -218,8 +272,15 @@ export default function SubscriptionList() {
         </div>
       )}
 
+      {/* No results for filter */}
+      {!loading && subs.length > 0 && visibleSubs.length === 0 && (
+        <div className="text-center py-8" style={{ color: "var(--text-secondary)" }}>
+          No subscriptions match this filter.
+        </div>
+      )}
+
       {/* Table */}
-      {!loading && subs.length > 0 && (
+      {!loading && visibleSubs.length > 0 && (
         <div className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--bg-300)" }}>
           {/* Column headers */}
           <div
@@ -230,8 +291,8 @@ export default function SubscriptionList() {
             <span className="flex-1 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-primary)" }}>
               Name
             </span>
-            <span className="text-xs font-bold uppercase tracking-wider w-20 text-right shrink-0" style={{ color: "var(--text-primary)" }}>
-              Freq
+            <span className="text-xs font-bold uppercase tracking-wider w-[86px] text-right shrink-0" style={{ color: "var(--text-primary)" }}>
+              Frequency
             </span>
             <span className="text-xs font-bold uppercase tracking-wider w-24 text-right shrink-0" style={{ color: "var(--text-primary)" }}>
               Next
@@ -243,12 +304,13 @@ export default function SubscriptionList() {
           </div>
 
           {/* Rows */}
-          {subs.map((sub, idx) => {
+          {visibleSubs.map((sub, idx) => {
             const nextDate = getNextRenewalDate(sub.renewalDate, sub.frequency);
             const status = sub.isActive
               ? getRenewalStatus(sub.renewalDate, sub.frequency)
               : null;
-            const styles = status ? STATUS_STYLES[status] : null;
+            const statusStyles = status ? STATUS_STYLES[status] : null;
+            const freqStyles = FREQ_STYLES[sub.frequency];
 
             return (
               <div
@@ -259,22 +321,30 @@ export default function SubscriptionList() {
                   opacity: sub.isActive ? 1 : 0.55,
                 }}
               >
-                {/* Status dot */}
+                {/* Renewal status dot */}
                 <span
                   className="w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: styles?.dot ?? "#6b7280" }}
-                  title={styles?.label ?? "Inactive"}
+                  style={{ backgroundColor: statusStyles?.dot ?? "#6b7280" }}
+                  title={statusStyles?.label ?? "Inactive"}
                 />
 
                 {/* Name + sub-details */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span
                       className="text-sm font-medium truncate"
                       style={{ color: "var(--text-primary)" }}
                     >
                       {sub.name}
                     </span>
+                    {sub.category && (
+                      <span
+                        className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0"
+                        style={{ backgroundColor: "var(--bg-400)", color: "var(--text-secondary)" }}
+                      >
+                        {sub.category}
+                      </span>
+                    )}
                     {!sub.isActive && (
                       <span
                         className="text-xs px-1.5 py-0.5 rounded font-medium shrink-0"
@@ -308,10 +378,10 @@ export default function SubscriptionList() {
                   )}
                 </div>
 
-                {/* Frequency */}
+                {/* Frequency badge */}
                 <span
-                  className="text-xs w-20 text-right shrink-0"
-                  style={{ color: "var(--text-secondary)" }}
+                  className="text-xs font-semibold px-2 py-0.5 rounded-full w-[86px] text-center shrink-0"
+                  style={{ backgroundColor: freqStyles.bg, color: freqStyles.text }}
                 >
                   {FREQUENCY_LABELS[sub.frequency]}
                 </span>
@@ -319,7 +389,7 @@ export default function SubscriptionList() {
                 {/* Next renewal */}
                 <span
                   className="text-xs w-24 text-right shrink-0 font-medium"
-                  style={{ color: styles?.text ?? "var(--text-secondary)" }}
+                  style={{ color: statusStyles?.text ?? "var(--text-secondary)" }}
                 >
                   {formatDate(nextDate)}
                 </span>
@@ -411,18 +481,31 @@ export default function SubscriptionList() {
               </div>
             </div>
 
-            {/* Renewal date */}
-            <div>
-              <label className="text-xs font-medium mb-1 block" style={{ color: "var(--text-secondary)" }}>
-                Renewal Date *{" "}
-                <span className="font-normal opacity-70">— anchor date used to compute future renewals</span>
-              </label>
-              <input
-                className="input w-full"
-                type="date"
-                value={renewalDate}
-                onChange={(e) => setRenewalDate(e.target.value)}
-              />
+            {/* Renewal date + Category */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium mb-1 block" style={{ color: "var(--text-secondary)" }}>
+                  Renewal Date *{" "}
+                  <span className="font-normal opacity-70">— anchor for recurrence</span>
+                </label>
+                <input
+                  className="input w-full"
+                  type="date"
+                  value={renewalDate}
+                  onChange={(e) => setRenewalDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1 block" style={{ color: "var(--text-secondary)" }}>
+                  Category
+                </label>
+                <input
+                  className="input w-full"
+                  placeholder="Streaming, Software, Cloud…"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                />
+              </div>
             </div>
 
             {/* Payment method */}

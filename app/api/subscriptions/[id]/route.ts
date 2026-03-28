@@ -11,7 +11,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json();
-  const { name, cost, frequency, renewalDate, paymentMethod, website, notes, isActive } = body;
+  const { name, cost, frequency, renewalDate, paymentMethod, website, category, notes, isActive } = body;
 
   const sub = await prisma.subscription.update({
     where: { id: parseInt(id) },
@@ -22,6 +22,7 @@ export async function PATCH(
       ...(renewalDate != null && { renewalDate: new Date(renewalDate) }),
       ...(paymentMethod !== undefined && { paymentMethod: paymentMethod || null }),
       ...(website !== undefined && { website: website || null }),
+      ...(category !== undefined && { category: category || null }),
       ...(notes !== undefined && { notes: notes || null }),
       ...(isActive !== undefined && { isActive }),
     },
