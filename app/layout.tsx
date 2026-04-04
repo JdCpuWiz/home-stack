@@ -15,7 +15,12 @@ export const metadata: Metadata = {
   description: "Self-hosted home management platform",
   icons: {
     icon: "/logo.png",
-    apple: "/logo.png",
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "HomeStack",
+    statusBarStyle: "black-translucent",
   },
 };
 
