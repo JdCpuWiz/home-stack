@@ -59,7 +59,7 @@ hostname -I
 
 The kiosk URL is: `http://<SERVER_IP>:3005/kiosk`
 
-> Example: `http://192.168.7.198:3005/kiosk`
+> Example: `http://192.168.7.28:3005/kiosk`
 
 No login is required — the kiosk page is publicly accessible on the local network.
 
@@ -78,7 +78,7 @@ Paste this content (replace IP with your server's IP):
 [Desktop Entry]
 Type=Application
 Name=Kiosk
-Exec=bash -c 'sleep 5 && chromium --kiosk --noerrdialogs --disable-infobars --disable-session-crashed-bubble --disable-extensions --check-for-update-interval=31536000 --password-store=basic --app=http://192.168.7.198:3005/kiosk'
+Exec=bash -c 'sleep 5 && chromium --kiosk --noerrdialogs --disable-infobars --disable-session-crashed-bubble --disable-extensions --check-for-update-interval=31536000 --password-store=basic --app=http://192.168.7.28:3005/kiosk'
 NoDisplay=true
 X-GNOME-Autostart-enabled=true
 ```
