@@ -232,6 +232,167 @@ async def adjust_pantry_stock(product_id: int, quantity: int) -> str:
     return f"Stock updated: {product['name']} → {product['quantity']}"
 
 
+# ── Finance ────────────────────────────────────────────────────────────────────
+
+async def _fetch_month(client: httpx.AsyncClient, year: int, month: int) -> dict:
+    r = await client.get(
+        f"{_BASE}/api/finance/months/{year}/{month}",
+        headers=_headers(),
+        timeout=10,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
+def _current_ym() -> tuple[int, int]:
+    from datetime import date
+    today = date.today()
+    return today.year, today.month
+
+
+@mcp.tool()
+async def get_finance_summary(year: int = 0, month: int = 0) -> str:
+    """Get a financial overview for the current (or specified) month.
+
+    Returns net pay, total bills, paid vs unpaid amounts and counts,
+    and estimated remaining after bills.
+
+    Args:
+        year: Year (e.g. 2026). Defaults to current year.
+        month: Month 1-12. Defaults to current month.
+    """
+    y, m = _current_ym()
+    year = year or y
+    month = month or m
+
+    async with httpx.AsyncClient() as client:
+        data = await _fetch_month(client, year, month)
+
+    entries = data.get("entries", [])
+    month_name = f"{['', 'January','February','March','April','May','June','July','August','September','October','November','December'][month]} {year}"
+
+    total = sum(float(e["amount"]) for e in entries)
+    paid = sum(float(e["amount"]) for e in entries if e["isPaid"])
+    unpaid = total - paid
+    paid_count = sum(1 for e in entries if e["isPaid"])
+    unpaid_count = len(entries) - paid_count
+    net_pay = float(data["netPay"]) if data.get("netPay") is not None else None
+    net_str = f"${net_pay:.2f}" if net_pay is not None else "not set"
+
+    lines = [
+        f"Finances — {month_name}",
+        f"Net pay: {net_str}",
+        f"Total bills: ${total:.2f} ({len(entries)} items)",
+        f"Paid: ${paid:.2f} ({paid_count} items)",
+        f"Unpaid: ${unpaid:.2f} ({unpaid_count} items)",
+    ]
+    if net_pay is not None:
+        lines.append(f"Estimated remaining after bills: ${net_pay - unpaid:.2f}")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def get_bills(year: int = 0, month: int = 0) -> str:
+    """List all bills and subscriptions with paid/unpaid status for the current (or specified) month.
+
+    Args:
+        year: Year (e.g. 2026). Defaults to current year.
+        month: Month 1-12. Defaults to current month.
+    """
+    y, m = _current_ym()
+    year = year or y
+    month = month or m
+
+    async with httpx.AsyncClient() as client:
+        data = await _fetch_month(client, year, month)
+
+    entries = data.get("entries", [])
+    if not entries:
+        return "No bills found for this month."
+
+    month_name = f"{['', 'January','February','March','April','May','June','July','August','September','October','November','December'][month]} {year}"
+
+    CAT_LABELS = {
+        "BILLS": "Bills", "SUBSCRIPTIONS": "Subscriptions", "SHARED_CREDIT": "Shared Credit",
+        "MY_CARDS": "My Cards", "SHARED_CARDS": "Shared Cards", "LOANS": "Loans", "UNPLANNED": "Unplanned",
+    }
+
+    by_cat: dict = {}
+    for e in entries:
+        cat = CAT_LABELS.get(e["category"], e["category"])
+        by_cat.setdefault(cat, []).append(e)
+
+    lines = [f"Bills for {month_name}:"]
+    for cat, items in by_cat.items():
+        lines.append(f"\n{cat}:")
+        for e in items:
+            status = "✓" if e["isPaid"] else "○"
+            amount = f"${float(e['amount']):.2f}"
+            due = f" (due {e['payDay']}th)" if e.get("payDay") else ""
+            lines.append(f"  [{e['id']}] {status} {e['name']} — {amount}{due}")
+
+    paid_count = sum(1 for e in entries if e["isPaid"])
+    lines.append(f"\n{paid_count}/{len(entries)} paid")
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def mark_bill_paid(name: str, year: int = 0, month: int = 0) -> str:
+    """Mark a bill as paid.
+
+    Args:
+        name: Bill name — partial, case-insensitive match is supported.
+        year: Year. Defaults to current year.
+        month: Month 1-12. Defaults to current month.
+    """
+    return await _set_bill_paid(name, True, year, month)
+
+
+@mcp.tool()
+async def mark_bill_unpaid(name: str, year: int = 0, month: int = 0) -> str:
+    """Mark a bill as unpaid.
+
+    Args:
+        name: Bill name — partial, case-insensitive match is supported.
+        year: Year. Defaults to current year.
+        month: Month 1-12. Defaults to current month.
+    """
+    return await _set_bill_paid(name, False, year, month)
+
+
+async def _set_bill_paid(name: str, is_paid: bool, year: int, month: int) -> str:
+    y, m = _current_ym()
+    year = year or y
+    month = month or m
+    search = name.lower()
+
+    async with httpx.AsyncClient() as client:
+        data = await _fetch_month(client, year, month)
+        entries = data.get("entries", [])
+
+        entry = next((e for e in entries if e["name"].lower() == search), None)
+        if not entry:
+            entry = next(
+                (e for e in entries if search in e["name"].lower() or e["name"].lower() in search),
+                None,
+            )
+        if not entry:
+            names = ", ".join(e["name"] for e in entries)
+            return f'No bill matching "{name}". Available: {names}'
+
+        r = await client.patch(
+            f"{_BASE}/api/finance/entries/{entry['id']}",
+            headers={**_headers(), "Content-Type": "application/json"},
+            json={"isPaid": is_paid},
+            timeout=10,
+        )
+        r.raise_for_status()
+
+    action = "paid" if is_paid else "unpaid"
+    return f'Marked "{entry["name"]}" as {action}.'
+
+
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
