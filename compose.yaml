@@ -18,3 +18,17 @@ services:
       TIMESHEET_API_KEY: ${TIMESHEET_API_KEY:-}
     volumes:
       - ./uploads:/app/public/uploads
+
+  homestack-mcp:
+    build:
+      context: ./mcp
+      dockerfile: Dockerfile
+    container_name: homestack-mcp
+    restart: unless-stopped
+    ports:
+      - "8012:8012"
+    environment:
+      HOMESTACK_URL: http://homestack:3000
+      HOMESTACK_API_KEY: ${HOMESTACK_API_KEY:-}
+    depends_on:
+      - homestack
