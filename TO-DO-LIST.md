@@ -5,3 +5,5 @@ Begin my reviewing and then interview with questions to plan on how to act on th
 Once an item is completed it can be removed from the list but the file should remain even if it is empty.
 THe items on the list are numbered just for convenience and not order of importance.
 
+1. Add medical records tracker module — family health records similar to fastenhealth (conditions, medications, visits, documents per family member) — added: 2026-04-12
+
