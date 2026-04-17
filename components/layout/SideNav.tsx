@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import {
   Package, Plus, CheckSquare, Search, Users, X, ShoppingCart, History,
   Settings, CheckCheck, LogOut, LogIn, List, Trash2, UtensilsCrossed,
-  LayoutDashboard, Truck, Mail, DollarSign, ChevronDown, ScanLine, RefreshCw,
+  LayoutDashboard, Truck, DollarSign, ChevronDown, ScanLine, RefreshCw,
 } from "lucide-react";
 import { useGroceryActions } from "@/components/grocery/GroceryActionsContext";
 
@@ -124,7 +124,6 @@ export default function SideNav({ open, onClose }: Props) {
     totes: false,
     todos: false,
     packages: false,
-    email: false,
     finance: false,
     recipes: false,
     grocery: false,
@@ -222,15 +221,6 @@ export default function SideNav({ open, onClose }: Props) {
 
           {session && (
             <>
-              <SectionHeader label="Email" sectionKey="email" open={sections.email} onToggle={toggleSection} />
-              {sections.email && (
-                <NavLink href="/email-digest" label="Daily Digest" icon={<Mail size={15} />} onClick={onClose} />
-              )}
-            </>
-          )}
-
-          {session && (
-            <>
               <SectionHeader label="Finance" sectionKey="finance" open={sections.finance} onToggle={toggleSection} />
               {sections.finance && (
                 <>
@@ -297,7 +287,6 @@ export default function SideNav({ open, onClose }: Props) {
                 <>
                   <NavLink href="/settings/users" label="Users" icon={<Users size={15} />} onClick={onClose} />
                   <NavLink href="/settings/grocery" label="Grocery Settings" icon={<Settings size={15} />} onClick={onClose} />
-                  <NavLink href="/settings/email-digest" label="Email Settings" icon={<Mail size={15} />} onClick={onClose} />
                   <NavLink href="/settings/finance" label="Finance Settings" icon={<DollarSign size={15} />} onClick={onClose} />
                   <NavLink href="/settings/pantry" label="Pantry Settings" icon={<ScanLine size={15} />} onClick={onClose} />
                 </>

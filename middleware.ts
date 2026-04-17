@@ -16,6 +16,6 @@ export default withAuth(
 // Protected: everything else
 export const config = {
   matcher: [
-    "/((?!login|setup|api/setup|search|api/search|api/auth|api/packages|api/todos|api/email-digest|api/pantry|api/finance|api/kiosk|api/version|kiosk|totes/[^/]+$|_next/static|_next/image|favicon.ico|apple-touch-icon.png|logo.png|public).*)",
+    "/((?!login|setup|api/setup|search|api/search|api/auth|api/packages|api/todos|api/pantry|api/finance|api/kiosk|api/version|kiosk|totes/[^/]+$|_next/static|_next/image|favicon.ico|apple-touch-icon.png|logo.png|public).*)",
   ],
 };

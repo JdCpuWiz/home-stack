@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Package, CheckSquare, ShoppingCart, UtensilsCrossed, Truck, Mail, DollarSign, ScanLine, AlertTriangle, RefreshCw } from "lucide-react";
+import { Package, CheckSquare, ShoppingCart, UtensilsCrossed, Truck, DollarSign, ScanLine, AlertTriangle, RefreshCw } from "lucide-react";
 import { isSubscriptionDueInMonth } from "@/lib/subscriptionUtils";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ export default async function DashboardPage() {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  const [toteCount, todoCount, overdueCount, activeGroceryLists, pantryStats, recipeCount, activePackageCount, outForDeliveryCount, todayDigest, financeMonth, allActiveSubs] = await Promise.all([
+  const [toteCount, todoCount, overdueCount, activeGroceryLists, pantryStats, recipeCount, activePackageCount, outForDeliveryCount, financeMonth, allActiveSubs] = await Promise.all([
     prisma.tote.count(),
     prisma.todoItem.count(),
     prisma.todoItem.count({ where: { dueDate: { lt: now } } }),
@@ -37,7 +37,6 @@ export default async function DashboardPage() {
     prisma.recipe.count(),
     prisma.package.count({ where: { delivered: false } }),
     prisma.package.count({ where: { status: "OUT_FOR_DELIVERY" } }),
-    prisma.emailDigest.findFirst({ where: { clearedAt: null }, select: { totalCount: true } }),
     prisma.financeMonth.findUnique({
       where: { year_month: { year: currentYear, month: currentMonth } },
       include: { entries: { select: { amount: true, isPaid: true } } },
@@ -188,34 +187,6 @@ export default async function DashboardPage() {
             All Packages →
           </Link>
         </div>
-        {/* Email Digest */}
-        <div className="card flex flex-col gap-3">
-          <div className="flex items-center gap-2" style={{ color: "var(--accent-orange)" }}>
-            <Mail size={20} />
-            <span className="font-semibold">Email Digest</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-4xl font-bold" style={{ color: "var(--accent-orange)" }}>
-              {todayDigest?.totalCount ?? 0}
-            </span>
-            {todayDigest ? (
-              <span
-                className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                style={{ backgroundColor: "#1e3a5f", color: "#93c5fd" }}
-              >
-                today
-              </span>
-            ) : (
-              <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
-                no digest yet
-              </span>
-            )}
-          </div>
-          <Link href="/email-digest" className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            View Digest →
-          </Link>
-        </div>
-
         {/* Finance */}
         <div className="card flex flex-col gap-3">
           <div className="flex items-center gap-2" style={{ color: "var(--accent-orange)" }}>

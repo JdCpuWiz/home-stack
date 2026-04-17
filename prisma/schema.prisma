@@ -156,35 +156,6 @@ model Package {
   updatedAt         DateTime      @updatedAt
 }
 
-// ─── Email Digest ──────────────────────────────────────────────────
-model ApprovedSender {
-  id          Int      @id @default(autoincrement())
-  value       String   @unique   // e.g. "orders@amazon.com" or "@amazon.com"
-  label       String?            // optional display name, e.g. "Amazon"
-  priority    String   @default("NORMAL")  // "HIGH" | "NORMAL" | "LOW"
-  description String?            // Ollama-generated, stored for HIGH priority senders
-  createdAt   DateTime @default(now())
-}
-
-model EmailDigest {
-  id              Int       @id @default(autoincrement())
-  startedAt       DateTime  @default(now())  // when this accumulation period began
-  clearedAt       DateTime?                  // null = current active digest
-  totalCount      Int       @default(0)
-  unapprovedCount Int       @default(0)
-  entries         Json      @default("[]")   // [{ sender: string, count: number }]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-}
-
-model EmailSummary {
-  id        Int      @id @default(autoincrement())
-  sender    String
-  subject   String
-  summary   String
-  createdAt DateTime @default(now())
-}
-
 // ─── Finance ──────────────────────────────────────────────────────
 enum FinanceCategory {
   BILLS
