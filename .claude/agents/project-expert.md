@@ -113,7 +113,9 @@ next.config.ts                # standalone + /uploads rewrite + NEXT_PUBLIC_APP_
 
 ## Critical Gotchas
 
-1. **Prisma v5** — pinned; server has Node 20.18.1 (v7 requires 20.19+). Never upgrade without checking Node version.
+1. **Prisma connection pool** — shared Postgres at `192.168.7.223` has limited `max_connections`. `lib/prisma.ts` uses `buildClient()` to cap each process at 3 connections (`connection_limit=3&pool_timeout=30`). The global singleton is always assigned (not dev-only) to prevent duplicate PrismaClient instances per worker in production. Never revert this or remove the cap.
+
+2. **Prisma v5** — pinned; server has Node 20.18.1 (v7 requires 20.19+). Never upgrade without checking Node version.
 2. **`middleware.ts` filename** — keep as `middleware.ts`, not `proxy.ts`. The exported function is named `proxy()` wrapping `withAuth`. Ignore Next.js deprecation warnings.
 3. **n8n API routes** — must be added to `middleware.ts` exclusion list or NextAuth intercepts before Bearer auth runs. Current exclusions: `api/packages`, `api/todos`, `api/email-digest`.
 4. **`timesheetClient.ts` uses `node:http`** — NOT Next.js fetch. Using fetch with custom headers causes "l.slice is not a function" errors in Next.js/Turbopack.
