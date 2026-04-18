@@ -45,10 +45,7 @@ Per-store shopping lists. Single active list per store. Check item → removes i
 CRUD with ingredients, steps, tags, servings, source URL. Scan recipe photos via Ollama (multimodal LLM) to auto-extract ingredients and steps. Uses `OLLAMA_URL` + `OLLAMA_MODEL` env vars.
 
 ### Packages
-Shipment tracking. Created/updated by **n8n** via Bearer token auth. Inline editable description and shipper name. Delivered packages never downgraded. Auth via `HOMESTACK_API_KEY` bearer token.
-
-### Email Digest
-Persistent accumulation of incoming email senders. HIGH/NORMAL/LOW priority tiers. HIGH senders get Ollama-generated one-sentence description. Unapproved senders counted separately. Fed by n8n via `POST /api/email-digest/tally`. Cleared via "Clear & Archive".
+Shipment tracking. Packages registered and updated by **jarvis-ai** email scanner via Bearer token auth (`HOMESTACK_API_KEY`). Inline editable description and shipper name. Delivered packages never downgraded. USPS notification emails (delivery alerts + Informed Delivery digests) are parsed by jarvis-ai to extract ETA, shipper name, and status — no USPS API needed. UPS status updated via UPS API in `package_status_updater.py`.
 
 ### Finance
 Monthly budget tracker. Categories: Bills, Subscriptions, Shared Credit, My Cards, Shared Cards, Loans, Unplanned. Net pay pulled automatically from timesheet app via `lib/timesheetClient.ts`. Amounts carry over from previous month. Inline editing, paid checkboxes, due-date color coding (yellow ≤5 days, red ≤1 day/overdue). Complete Month action locks the month.
@@ -71,7 +68,7 @@ Root layout → SessionWrapper → Shell (client) → [Header + SideNav + main]
 | `/totes/[id]` | Public (QR code target) |
 | All others | Protected → redirect `/login` |
 
-Login uses `username` field. JWT session. n8n Bearer token routes excluded in `middleware.ts` exclusion list.
+Login uses `username` field. JWT session. jarvis-ai Bearer token routes excluded in `middleware.ts` exclusion list.
 
 ## Design System
 
@@ -105,7 +102,6 @@ lib/prisma.ts                 # Prisma client singleton
 lib/auth.ts                   # NextAuth config
 lib/apiAuth.ts                # Bearer token helper for n8n routes
 lib/timesheetClient.ts        # Fetches net pay from timesheet (uses node:http — NOT fetch)
-lib/ollamaDigest.ts           # Ollama sender descriptions
 middleware.ts                 # NextAuth withAuth + API exclusion list
 prisma/schema.prisma          # DB schema
 next.config.ts                # standalone + /uploads rewrite + NEXT_PUBLIC_APP_VERSION
@@ -117,7 +113,7 @@ next.config.ts                # standalone + /uploads rewrite + NEXT_PUBLIC_APP_
 
 2. **Prisma v5** — pinned; server has Node 20.18.1 (v7 requires 20.19+). Never upgrade without checking Node version.
 2. **`middleware.ts` filename** — keep as `middleware.ts`, not `proxy.ts`. The exported function is named `proxy()` wrapping `withAuth`. Ignore Next.js deprecation warnings.
-3. **n8n API routes** — must be added to `middleware.ts` exclusion list or NextAuth intercepts before Bearer auth runs. Current exclusions: `api/packages`, `api/todos`, `api/email-digest`.
+3. **jarvis-ai Bearer token routes** — must be added to `middleware.ts` exclusion list or NextAuth intercepts before Bearer auth runs. Current exclusions: `api/packages`, `api/todos`, `api/pantry`.
 4. **`timesheetClient.ts` uses `node:http`** — NOT Next.js fetch. Using fetch with custom headers causes "l.slice is not a function" errors in Next.js/Turbopack.
 5. **Photos served via API** — Next.js standalone doesn't serve `public/`. Uploaded files served via `/api/uploads/[...path]`, rewritten from `/uploads/*` in `next.config.ts`.
 6. **`useSearchParams()` needs Suspense** — login page split into `page.tsx` + `LoginForm.tsx`.
@@ -145,5 +141,5 @@ HomeStack exposes an MCP server (FastMCP sidecar) on **port 8012** consumed by j
 |---|---|---|
 | PostgreSQL | Primary DB | `DATABASE_URL` |
 | Timesheet app | Net pay sync | `TIMESHEET_URL` + `TIMESHEET_API_KEY` |
-| Ollama | Recipe scan + digest descriptions | `OLLAMA_URL` + `OLLAMA_MODEL` |
-| n8n | Packages + email ingestion | `HOMESTACK_API_KEY` bearer token |
+| Ollama | Recipe scan | `OLLAMA_URL` + `OLLAMA_MODEL` |
+| jarvis-ai | Package registration + USPS email parsing | `HOMESTACK_API_KEY` bearer token |
