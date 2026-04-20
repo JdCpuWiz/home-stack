@@ -9,9 +9,15 @@ export default async function TodosPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
-  const todos = await prisma.todoItem.findMany({
-    orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
-  });
+  const [todos, categories] = await Promise.all([
+    prisma.todoItem.findMany({ orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }] }),
+    prisma.todoCategory.findMany({ orderBy: { name: "asc" } }),
+  ]);
 
-  return <TodoList initialTodos={todos as unknown as TodoItem[]} />;
+  return (
+    <TodoList
+      initialTodos={todos as unknown as TodoItem[]}
+      initialCategories={categories}
+    />
+  );
 }

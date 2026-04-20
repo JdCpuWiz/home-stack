@@ -13,10 +13,11 @@ import { TodoItem } from "./todoUtils";
 type Props = {
   children: React.ReactNode;
   todo?: TodoItem;
+  categories: string[];
   onSave: (todo: TodoItem) => void;
 };
 
-export default function TodoFormDialog({ children, todo, onSave }: Props) {
+export default function TodoFormDialog({ children, todo, categories, onSave }: Props) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState(todo?.title ?? "");
@@ -165,12 +166,18 @@ export default function TodoFormDialog({ children, todo, onSave }: Props) {
             >
               Category
             </label>
-            <input
+            <select
               className="input mt-1"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              placeholder="Shopping, Home, Work…"
-            />
+            >
+              <option value="">— No category —</option>
+              {categories.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button

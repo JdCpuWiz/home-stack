@@ -66,6 +66,12 @@ model TodoItem {
   updatedAt DateTime  @updatedAt
 }
 
+model TodoCategory {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
 // ─── Grocery ─────────────────────────────────────────────────────
 model GroceryStore {
   id        Int           @id @default(autoincrement())
